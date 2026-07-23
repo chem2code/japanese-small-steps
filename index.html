@@ -1,117 +1,17 @@
----
-layout: page
----
-
-{% include base.html %}
-<section class="hero">
-  <div class="hero-copy">
-    <span class="eyebrow">日本語を、毎日の習慣に</span>
-    <h1>轻松学日语，<br><em>每天进步一点点。</em></h1>
-    <p>从五十音到日常会话，沿着《标准日本语》的课程路径，把单词、语法和课文真正学会。</p>
-    <div class="hero-actions">
-      <a class="button button-primary" href="#beginner-guide">我是零基础 <span>→</span></a>
-      <a class="button button-ghost" href="{{ basepath }}/uwp/l/lesson1.html">直接开始第一课</a>
-    </div>
-    <div class="hero-stats">
-      <div><strong>48</strong><span>初级课程</span></div>
-      <div><strong>32</strong><span>中级课程</span></div>
-      <div><strong>1,000+</strong><span>核心词汇</span></div>
-    </div>
-  </div>
-  <div class="hero-visual" aria-label="日语学习卡片示例">
-    <div class="sun-disc"></div>
-    <div class="study-card card-back">
-      <span>今日の目標</span>
-      <strong>15 分</strong>
-    </div>
-    <div class="study-card card-main">
-      <div class="card-top"><span>LESSON 01</span><span class="sound">♪</span></div>
-      <p class="kana">はじめまして</p>
-      <p class="romaji">hajimemashite</p>
-      <div class="meaning">初次见面</div>
-      <div class="progress"><i></i></div>
-      <small>今日已完成 3 / 5</small>
-    </div>
-    <div class="seal">学<br>ぶ</div>
-  </div>
-</section>
-
-<section id="beginner-guide" class="starter-panel">
-  <div class="starter-intro">
-    <span class="eyebrow">YOUR FIRST 15 MINUTES</span>
-    <h2>第一次来？今天只做这三件事</h2>
-    <p>不要急着背完整张五十音。先听、再读、最后开口，用一个可完成的小目标建立学习节奏。</p>
-  </div>
-  <ol class="starter-steps">
-    <li><span>01</span><div><strong>认识句子</strong><small>3 分钟 · 看懂「我是……」</small></div></li>
-    <li><span>02</span><div><strong>跟读课文</strong><small>7 分钟 · 慢速听读 3 遍</small></div></li>
-    <li><span>03</span><div><strong>记住 5 个词</strong><small>5 分钟 · 当天少量复习</small></div></li>
-  </ol>
-  <div class="starter-action">
-    <span>预计 15 分钟</span>
-    <a class="button button-primary" href="{{ basepath }}/uwp/l/lesson1.html">开始今日学习 →</a>
-  </div>
-</section>
-
-<section class="section-block learning-path">
-  <div class="section-heading">
-    <div><span class="eyebrow">LEARNING PATH</span><h2>按阶段学习，不再迷路</h2></div>
-    <a href="{{ basepath }}/uwp/menu.html">查看完整路线 →</a>
-  </div>
-  <div class="path-grid">
-    <a class="path-card coral" href="{{ basepath }}/uwp/l/lesson1.html">
-      <span class="path-icon">あ</span><span class="path-level">STEP 01</span>
-      <h3>初级日语</h3><p>从基础句型、假名与生活会话开始。</p><b>48 课 · 开始学习 →</b>
-    </a>
-    <a class="path-card indigo" href="{{ basepath }}/uwp/m/lesson1.html">
-      <span class="path-icon">話</span><span class="path-level">STEP 02</span>
-      <h3>中级进阶</h3><p>提升阅读表达，理解更自然的日语语境。</p><b>32 课 · 继续进阶 →</b>
-    </a>
-    <a class="path-card mint" href="{{ basepath }}/tools/wordlist.html">
-      <span class="path-icon">単</span><span class="path-level">DAILY</span>
-      <h3>词汇训练</h3><p>假名、声调与释义，一起高效记忆。</p><b>打开单词本 →</b>
-    </a>
-  </div>
-</section>
-
-<section class="section-block method-section">
-  <div class="method-copy">
-    <span class="eyebrow">BEGINNER METHOD</span>
-    <h2>初学日语，顺序比速度更重要</h2>
-    <p>每课遵循一个简单闭环：先理解课文场景，再抓住一个核心句型，然后跟读，最后用少量词汇复习完成巩固。</p>
-    <a href="{{ basepath }}/uwp/menu.html">查看 12 周入门路线 →</a>
-  </div>
-  <div class="method-loop">
-    <div><span>1</span><strong>理解</strong><small>先看场景和译文</small></div>
-    <i>→</i>
-    <div><span>2</span><strong>跟读</strong><small>听一句，说一句</small></div>
-    <i>→</i>
-    <div><span>3</span><strong>练习</strong><small>只练核心句型</small></div>
-    <i>→</i>
-    <div><span>4</span><strong>复习</strong><small>当天回顾 5 个词</small></div>
-  </div>
-</section>
-
-<section class="section-block library-section">
-  <div class="section-heading">
-    <div><span class="eyebrow">KNOWLEDGE LIBRARY</span><h2>学习资料库</h2></div>
-  </div>
-  <div class="library-grid">
-  {% for tag in site.categories %}
-    {% assign cate = tag[0] %}
-    <article class="library-card">
-      <div class="library-card-head">
-        <span>{% if cate == 'grammar' %}文法{% elsif cate == 'word' %}ことば{% elsif cate == 'class' %}初級{% elsif cate == 'middleclass' %}中級{% else %}NOTE{% endif %}</span>
-        <small>{{ tag[1] | size }} 篇</small>
-      </div>
-      <h3>{% if site.categorythemes[cate].name != null %}{{site.categorythemes[cate].name}}{% else %}{{ cate | capitalize }}{% endif %}</h3>
-      <div class="library-links">
-        {% assign pages_list = tag[1] %}
-        {% for post in pages_list reversed limit: 3 %}
-          {% if post.title != null %}<a href="{{ basepath }}{{ post.url }}">{{ post.title }}<span>→</span></a>{% endif %}
-        {% endfor %}
-      </div>
-    </article>
-  {% endfor %}
-  </div>
-</section>
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#f7f5f0" />
+    <meta name="description" content="面向中文学习者的现代日语学习应用" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;600;700;800&family=Noto+Serif+JP:wght@600;700&display=swap" rel="stylesheet" />
+    <title>氷河日本語</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

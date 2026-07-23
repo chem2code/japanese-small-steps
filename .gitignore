@@ -3,6 +3,10 @@ _site
 .sass-cache
 .jekyll-metadata
 node_modules
+dist
+*.tsbuildinfo
+vite.config.js
+vite.config.d.ts
 /site.vfs*
 /_site*.zip
 .vs/
