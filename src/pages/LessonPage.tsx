@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { ArrowLeft, ArrowRight, Check, CheckCircle2, Eye, EyeOff, Volume2 } from 'lucide-react'
 import {
@@ -14,6 +14,33 @@ interface Progress { completed: string[]; toggle: (key: string) => void }
 
 function ContentBlock({ source }: { source: string }) {
   return <div className="formatted-content" dangerouslySetInnerHTML={{ __html: renderContent(source) }} />
+}
+
+function LessonAudio({ src, label, helper }: { src: string; label: string; helper: string }) {
+  const audioRef = useRef<HTMLAudioElement>(null)
+  const [rate, setRate] = useState(1)
+
+  const changeRate = (nextRate: number) => {
+    setRate(nextRate)
+    if (audioRef.current) audioRef.current.playbackRate = nextRate
+  }
+
+  return (
+    <div className="lesson-audio">
+      <div className="audio-heading">
+        <span className="audio-icon"><Volume2 size={18} /></span>
+        <div><strong>{label}</strong><small>{helper}</small></div>
+        <div className="speed-control" aria-label="播放速度">
+          {[0.8, 1, 1.2].map((value) => (
+            <button className={rate === value ? 'active' : ''} key={value} onClick={() => changeRate(value)}>
+              {value}×
+            </button>
+          ))}
+        </div>
+      </div>
+      <audio ref={audioRef} controls preload="metadata" src={src}>你的浏览器不支持音频播放。</audio>
+    </div>
+  )
 }
 
 export function LessonPage({ progress }: { progress: Progress }) {
@@ -32,6 +59,7 @@ export function LessonPage({ progress }: { progress: Progress }) {
   if (!lesson) return <div className="page empty-state">没有找到这节课程。<Link to="/courses">返回课程地图</Link></div>
 
   const key = lessonKey(level, id)
+  const audioPrefix = level === 'beginner' ? 'l' : 'm'
   const completed = progress.completed.includes(key)
   const previous = id > 1 ? id - 1 : null
   const next = id < lessons.length ? id + 1 : null
@@ -62,6 +90,11 @@ export function LessonPage({ progress }: { progress: Progress }) {
               <button onClick={() => setShowTranslation((value) => !value)}><Eye size={16} />{showTranslation ? '隐藏译文' : '显示译文'}</button>
               <button onClick={() => speechSynthesis.speak(Object.assign(new SpeechSynthesisUtterance(plainJapanese(lesson.title)), { lang: 'ja-JP' }))}><Volume2 size={16} />朗读标题</button>
             </div>
+            <LessonAudio
+              src={`/assets/audio/lesson/${audioPrefix}${id}.mp3`}
+              label="课文录音"
+              helper="建议先听一遍，再用 0.8× 逐句跟读"
+            />
           </section>
 
           <section id="text" className="lesson-section">
@@ -80,6 +113,11 @@ export function LessonPage({ progress }: { progress: Progress }) {
 
           {lessonWords.length > 0 && <section id="words" className="lesson-section">
             <div className="lesson-section-title"><span>03</span><div><h2>生词表</h2><p>先记住最常用的词，不必一次全部掌握</p></div></div>
+            <LessonAudio
+              src={`/assets/audio/word/${audioPrefix}${id}.mp3`}
+              label="单词录音"
+              helper="播放本课词汇的标准读音"
+            />
             <div className="word-grid">{lessonWords.map((word, index) => <button className="word-card" key={`${word.lesson}-${index}`} onClick={() => speechSynthesis.speak(Object.assign(new SpeechSynthesisUtterance(plainJapanese(word.word || word.kana)), { lang: 'ja-JP' }))}><span dangerouslySetInnerHTML={{ __html: japaneseMarkup(word.word || word.kanji) }} /><small>{word.kana.replace(/@\d*/g, '')}</small><b>{word.desc}</b><Volume2 size={14} /></button>)}</div>
           </section>}
 
