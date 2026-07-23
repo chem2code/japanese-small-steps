@@ -7,6 +7,11 @@ export const japaneseMarkup = (source = '') =>
     .replace(/!(.*?)\((.*?)\)/g, '<ruby>$1<rt>$2</rt></ruby>')
     .replace(/([\u3040-\u30ff]+)@\d{0,2}/g, '$1')
 
+export const kanaReading = (source = '') =>
+  source
+    .replace(/!(.*?)\((.*?)\)/g, '$2')
+    .replace(/([\u3040-\u30ff]+)@\d{0,2}/g, '$1')
+
 export const renderContent = (source = '') =>
   marked.parse(japaneseMarkup(source)) as string
 

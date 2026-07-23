@@ -8,7 +8,7 @@ import {
   type Level,
 } from '../data'
 import { grammarForLesson, wordsForLesson } from '../lessonDetails'
-import { japaneseMarkup, plainJapanese, renderContent } from '../content'
+import { japaneseMarkup, kanaReading, plainJapanese, renderContent } from '../content'
 
 interface Progress { completed: string[]; toggle: (key: string) => void }
 
@@ -51,8 +51,13 @@ export function LessonPage({ progress }: { progress: Progress }) {
   const lesson = lessons.find((item) => item.id === id)
   const [showTranslation, setShowTranslation] = useState(false)
   const [showRuby, setShowRuby] = useState(true)
+  const [showReading, setShowReading] = useState(level === 'beginner')
 
-  useEffect(() => { window.scrollTo(0, 0); setShowTranslation(false) }, [id, level])
+  useEffect(() => {
+    window.scrollTo(0, 0)
+    setShowTranslation(false)
+    setShowReading(level === 'beginner')
+  }, [id, level])
   const lessonWords = useMemo(() => level === 'beginner' ? wordsForLesson(id).slice(0, 30) : [], [id, level])
   const lessonGrammar = useMemo(() => level === 'beginner' ? grammarForLesson(id) : [], [id, level])
 
@@ -84,9 +89,11 @@ export function LessonPage({ progress }: { progress: Progress }) {
           <section id="overview" className="lesson-intro">
             <span className="eyebrow">LESSON {String(id).padStart(2, '0')}</span>
             <h1 dangerouslySetInnerHTML={{ __html: japaneseMarkup(lesson.title) }} />
+            {showReading && level === 'beginner' && <div className="title-reading">{kanaReading(lesson.title)}</div>}
             <p>{level === 'beginner' ? '本课建议用 20 分钟完成：先理解句型，再跟读课文，最后复习词汇。' : `会话：${plainJapanese(lesson.sceneTitle)}`}</p>
             <div className="lesson-tools">
               <button onClick={() => setShowRuby((value) => !value)}>{showRuby ? <EyeOff size={16} /> : <Eye size={16} />}{showRuby ? '隐藏注音' : '显示注音'}</button>
+              {level === 'beginner' && <button onClick={() => setShowReading((value) => !value)}>{showReading ? <EyeOff size={16} /> : <Eye size={16} />}{showReading ? '隐藏整句读音' : '显示整句读音'}</button>}
               <button onClick={() => setShowTranslation((value) => !value)}><Eye size={16} />{showTranslation ? '隐藏译文' : '显示译文'}</button>
               <button onClick={() => speechSynthesis.speak(Object.assign(new SpeechSynthesisUtterance(plainJapanese(lesson.title)), { lang: 'ja-JP' }))}><Volume2 size={16} />朗读标题</button>
             </div>
@@ -101,6 +108,12 @@ export function LessonPage({ progress }: { progress: Progress }) {
             <div className="lesson-section-title"><span>01</span><div><h2>{level === 'beginner' ? '基本课文' : lesson.sceneTitle}</h2><p>先完整阅读，再逐句跟读</p></div></div>
             <ContentBlock source={lesson.basic} />
             {lesson.conversation && <ContentBlock source={lesson.conversation} />}
+            {showReading && level === 'beginner' && (
+              <details className="reading-panel" open>
+                <summary>整句假名读音 <small>先看原文，再用假名确认读法</small></summary>
+                <ContentBlock source={kanaReading([lesson.basic, lesson.conversation].filter(Boolean).join('\n\n'))} />
+              </details>
+            )}
             {showTranslation && (lesson.translation || lesson.conversationTranslation) && (
               <div className="translation-box"><b>中文译文</b><ContentBlock source={[lesson.translation, lesson.conversationTranslation].join('\n\n')} /></div>
             )}
