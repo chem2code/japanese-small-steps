@@ -17,6 +17,15 @@
     "jsx": "react-jsx",
     "types": ["vite/client"]
   },
-  "include": ["src/**/*.tsx", "src/data.ts", "src/lessonDetails.ts", "src/content.ts", "src/useProgress.ts", "src/vite-env.d.ts"],
+  "include": [
+    "src/**/*.tsx",
+    "src/anki.ts",
+    "src/content.ts",
+    "src/data.ts",
+    "src/lessonDetails.ts",
+    "src/lessonMedia.ts",
+    "src/useProgress.ts",
+    "src/vite-env.d.ts"
+  ],
   "exclude": ["src/js", "src/styl"]
 }

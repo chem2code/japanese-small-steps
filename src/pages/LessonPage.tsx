@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { ArrowLeft, ArrowRight, Check, CheckCircle2, Eye, EyeOff, Volume2 } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Check, CheckCircle2, Download, Eye, EyeOff, Layers3, Volume2 } from 'lucide-react'
 import {
   beginnerLessons,
   intermediateLessons,
@@ -9,6 +9,9 @@ import {
 } from '../data'
 import { grammarForLesson, wordsForLesson } from '../lessonDetails'
 import { japaneseMarkup, kanaReading, plainJapanese, renderContent } from '../content'
+import { exportLessonToAnki } from '../anki'
+import { getLessonMedia } from '../lessonMedia'
+import { FlashcardStudy } from '../components/FlashcardStudy'
 
 interface Progress { completed: string[]; toggle: (key: string) => void }
 
@@ -65,11 +68,14 @@ export function LessonPage({ progress }: { progress: Progress }) {
   const wordAudioRef = useRef<HTMLAudioElement>(null)
   const wordStopHandlerRef = useRef<(() => void) | null>(null)
   const [activeWord, setActiveWord] = useState<number | null>(null)
+  const [studyOpen, setStudyOpen] = useState(false)
+  const [exported, setExported] = useState(false)
 
   if (!lesson) return <div className="page empty-state">没有找到这节课程。<Link to="/courses">返回课程地图</Link></div>
 
   const key = lessonKey(level, id)
   const audioPrefix = level === 'beginner' ? 'l' : 'm'
+  const lessonMedia = getLessonMedia(level, id)
   const completed = progress.completed.includes(key)
   const previous = id > 1 ? id - 1 : null
   const next = id < lessons.length ? id + 1 : null
@@ -109,6 +115,12 @@ export function LessonPage({ progress }: { progress: Progress }) {
     void audio.play()
   }
 
+  const exportAnki = () => {
+    exportLessonToAnki(lessonWords, level, id, lesson.title)
+    setExported(true)
+    window.setTimeout(() => setExported(false), 2_500)
+  }
+
   return (
     <div className={`lesson-page ${showRuby ? '' : 'hide-ruby'}`}>
       <header className="lesson-topbar">
@@ -131,6 +143,12 @@ export function LessonPage({ progress }: { progress: Progress }) {
             <h1 dangerouslySetInnerHTML={{ __html: japaneseMarkup(lesson.title) }} />
             {showReading && level === 'beginner' && <div className="title-reading">{kanaReading(lesson.title)}</div>}
             <p>{level === 'beginner' ? '本课建议用 20 分钟完成：先理解句型，再跟读课文，最后复习词汇。' : `会话：${plainJapanese(lesson.sceneTitle)}`}</p>
+            {lessonMedia && (
+              <figure className="lesson-visual">
+                <img src={lessonMedia.src} alt={lessonMedia.alt} loading="lazy" decoding="async" />
+                <figcaption>{lessonMedia.caption}</figcaption>
+              </figure>
+            )}
             <div className="lesson-tools">
               <button onClick={() => setShowRuby((value) => !value)}>{showRuby ? <EyeOff size={16} /> : <Eye size={16} />}{showRuby ? '隐藏注音' : '显示注音'}</button>
               {level === 'beginner' && <button onClick={() => setShowReading((value) => !value)}>{showReading ? <EyeOff size={16} /> : <Eye size={16} />}{showReading ? '隐藏整句读音' : '显示整句读音'}</button>}
@@ -167,6 +185,11 @@ export function LessonPage({ progress }: { progress: Progress }) {
 
           {lessonWords.length > 0 && <section id="words" className="lesson-section">
             <div className="lesson-section-title"><span>03</span><div><h2>生词表</h2><p>先记住最常用的词，不必一次全部掌握</p></div></div>
+            <div className="anki-actions">
+              <div><span className="anki-mark">A</span><p><strong>Anki 学习</strong><small>站内复习，或导出到 Anki 桌面版</small></p></div>
+              <button onClick={() => setStudyOpen(true)}><Layers3 size={16} />闪卡复习</button>
+              <button onClick={exportAnki}><Download size={16} />{exported ? '已导出' : '导出 Anki'}</button>
+            </div>
             <LessonAudio
               audioRef={wordAudioRef}
               src={`/assets/audio/word/${audioPrefix}${id}.mp3`}
@@ -186,6 +209,7 @@ export function LessonPage({ progress }: { progress: Progress }) {
           </nav>
         </article>
       </div>
+      {studyOpen && <FlashcardStudy words={lessonWords} title={`第 ${id} 课`} onClose={() => setStudyOpen(false)} />}
     </div>
   )
 }
