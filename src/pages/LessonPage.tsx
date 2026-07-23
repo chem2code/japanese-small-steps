@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { ArrowLeft, ArrowRight, Check, CheckCircle2, Eye, EyeOff, Volume2 } from 'lucide-react'
 import {
@@ -16,8 +16,9 @@ function ContentBlock({ source }: { source: string }) {
   return <div className="formatted-content" dangerouslySetInnerHTML={{ __html: renderContent(source) }} />
 }
 
-function LessonAudio({ src, label, helper }: { src: string; label: string; helper: string }) {
-  const audioRef = useRef<HTMLAudioElement>(null)
+function LessonAudio({ src, label, helper, audioRef: providedRef }: { src: string; label: string; helper: string; audioRef?: RefObject<HTMLAudioElement | null> }) {
+  const internalRef = useRef<HTMLAudioElement>(null)
+  const audioRef = providedRef || internalRef
   const [rate, setRate] = useState(1)
 
   const changeRate = (nextRate: number) => {
@@ -58,8 +59,12 @@ export function LessonPage({ progress }: { progress: Progress }) {
     setShowTranslation(false)
     setShowReading(level === 'beginner')
   }, [id, level])
-  const lessonWords = useMemo(() => level === 'beginner' ? wordsForLesson(id).slice(0, 30) : [], [id, level])
+  const lessonWords = useMemo(() => level === 'beginner' ? wordsForLesson(id) : [], [id, level])
   const lessonGrammar = useMemo(() => level === 'beginner' ? grammarForLesson(id) : [], [id, level])
+  const lessonAudioRef = useRef<HTMLAudioElement>(null)
+  const wordAudioRef = useRef<HTMLAudioElement>(null)
+  const wordStopHandlerRef = useRef<(() => void) | null>(null)
+  const [activeWord, setActiveWord] = useState<number | null>(null)
 
   if (!lesson) return <div className="page empty-state">没有找到这节课程。<Link to="/courses">返回课程地图</Link></div>
 
@@ -68,6 +73,41 @@ export function LessonPage({ progress }: { progress: Progress }) {
   const completed = progress.completed.includes(key)
   const previous = id > 1 ? id - 1 : null
   const next = id < lessons.length ? id + 1 : null
+
+  const playLessonAudio = () => {
+    const audio = lessonAudioRef.current
+    if (!audio) return
+    audio.currentTime = 0
+    void audio.play()
+  }
+
+  const playWordAudio = (index: number) => {
+    const audio = wordAudioRef.current
+    if (!audio || !Number.isFinite(audio.duration) || lessonWords.length === 0) return
+
+    if (wordStopHandlerRef.current) {
+      audio.removeEventListener('timeupdate', wordStopHandlerRef.current)
+    }
+
+    const segmentLength = audio.duration / lessonWords.length
+    const start = index * segmentLength
+    const end = Math.min(audio.duration, (index + 1) * segmentLength)
+    const stopHandler = () => {
+      if (audio.currentTime >= end - 0.05) {
+        audio.pause()
+        audio.removeEventListener('timeupdate', stopHandler)
+        wordStopHandlerRef.current = null
+        setActiveWord(null)
+      }
+    }
+
+    wordStopHandlerRef.current = stopHandler
+    audio.addEventListener('timeupdate', stopHandler)
+    audio.playbackRate = 1
+    audio.currentTime = start
+    setActiveWord(index)
+    void audio.play()
+  }
 
   return (
     <div className={`lesson-page ${showRuby ? '' : 'hide-ruby'}`}>
@@ -95,9 +135,10 @@ export function LessonPage({ progress }: { progress: Progress }) {
               <button onClick={() => setShowRuby((value) => !value)}>{showRuby ? <EyeOff size={16} /> : <Eye size={16} />}{showRuby ? '隐藏注音' : '显示注音'}</button>
               {level === 'beginner' && <button onClick={() => setShowReading((value) => !value)}>{showReading ? <EyeOff size={16} /> : <Eye size={16} />}{showReading ? '隐藏整句读音' : '显示整句读音'}</button>}
               <button onClick={() => setShowTranslation((value) => !value)}><Eye size={16} />{showTranslation ? '隐藏译文' : '显示译文'}</button>
-              <button onClick={() => speechSynthesis.speak(Object.assign(new SpeechSynthesisUtterance(plainJapanese(lesson.title)), { lang: 'ja-JP' }))}><Volume2 size={16} />朗读标题</button>
+              <button onClick={playLessonAudio}><Volume2 size={16} />播放课文</button>
             </div>
             <LessonAudio
+              audioRef={lessonAudioRef}
               src={`/assets/audio/lesson/${audioPrefix}${id}.mp3`}
               label="课文录音"
               helper="建议先听一遍，再用 0.8× 逐句跟读"
@@ -127,11 +168,12 @@ export function LessonPage({ progress }: { progress: Progress }) {
           {lessonWords.length > 0 && <section id="words" className="lesson-section">
             <div className="lesson-section-title"><span>03</span><div><h2>生词表</h2><p>先记住最常用的词，不必一次全部掌握</p></div></div>
             <LessonAudio
+              audioRef={wordAudioRef}
               src={`/assets/audio/word/${audioPrefix}${id}.mp3`}
               label="单词录音"
-              helper="播放本课词汇的标准读音"
+              helper={activeWord === null ? '点击下方单词，可播放对应的真人读音' : `正在播放：${plainJapanese(lessonWords[activeWord]?.word || lessonWords[activeWord]?.kana || '')}`}
             />
-            <div className="word-grid">{lessonWords.map((word, index) => <button className="word-card" key={`${word.lesson}-${index}`} onClick={() => speechSynthesis.speak(Object.assign(new SpeechSynthesisUtterance(plainJapanese(word.word || word.kana)), { lang: 'ja-JP' }))}><span dangerouslySetInnerHTML={{ __html: japaneseMarkup(word.word || word.kanji) }} /><small>{word.kana.replace(/@\d*/g, '')}</small><b>{word.desc}</b><Volume2 size={14} /></button>)}</div>
+            <div className="word-grid">{lessonWords.map((word, index) => <button className={`word-card ${activeWord === index ? 'is-speaking' : ''}`} key={`${word.lesson}-${index}`} onClick={() => playWordAudio(index)}><span dangerouslySetInnerHTML={{ __html: japaneseMarkup(word.word || word.kanji) }} /><small>{word.kana.replace(/@\d*/g, '')}</small><b>{word.desc}</b><Volume2 size={14} /></button>)}</div>
           </section>}
 
           <div className="lesson-finish">
