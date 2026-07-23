@@ -1,10 +1,12 @@
 ---
 layout: default
 ---
-<header class="page-header">
+{% if page.title %}
+<header class="page-title">
+  <span class="eyebrow">氷河日本語</span>
   <h1>{{ page.title }}</h1>
 </header>
-
-<article>
+{% endif %}
+<article class="article-body">
   {{ content }}
 </article>

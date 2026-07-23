@@ -12,10 +12,10 @@
 # you will see them accessed via {{ site.title }}, {{ site.email }}, and so on.
 # You can create any custom variable you would like, and they will be accessible
 # in the templates via {{ site.myvariable }}.
-title: 冰河标日学习日志
-sidebartitle: 冰河标日
+title: 氷河日本語
+sidebartitle: 氷河日本語
 email: icer@icerdesign.com
-description: 冰河魔法师的标准日本语学习日志
+description: 面向中文学习者的现代日语学习笔记
 baseurl: "" # the subpath of your site, e.g. /blog
 url: "http://japan.icerdesign.com" # the base hostname & protocol for your site
 
