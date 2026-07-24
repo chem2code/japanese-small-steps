@@ -13,9 +13,9 @@ import {
 } from 'lucide-react'
 import { useProgress } from './useProgress'
 
-const HomePage = lazy(() => import('./pages/HomePage').then((module) => ({ default: module.HomePage })))
-const CoursesPage = lazy(() => import('./pages/CoursesPage').then((module) => ({ default: module.CoursesPage })))
-const LessonPage = lazy(() => import('./pages/LessonPage').then((module) => ({ default: module.LessonPage })))
+const HomePage = lazy(() => import('./screens/HomePage').then((module) => ({ default: module.HomePage })))
+const CoursesPage = lazy(() => import('./screens/CoursesPage').then((module) => ({ default: module.CoursesPage })))
+const LessonPage = lazy(() => import('./screens/LessonPage').then((module) => ({ default: module.LessonPage })))
 
 const nav = [
   { to: '/', label: '学习首页', icon: Home, end: true },

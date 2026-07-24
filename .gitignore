@@ -4,6 +4,9 @@ _site
 .jekyll-metadata
 node_modules
 dist
+.next
+.open-next
+.wrangler
 *.tsbuildinfo
 vite.config.js
 vite.config.d.ts
