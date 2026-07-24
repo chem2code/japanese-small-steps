@@ -7,6 +7,8 @@ dist
 .next
 .open-next
 .wrangler
+/public/assets/
+/public/icons/
 *.tsbuildinfo
 vite.config.js
 vite.config.d.ts

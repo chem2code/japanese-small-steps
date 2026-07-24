@@ -7,8 +7,8 @@
     "node": ">=22.13.0"
   },
   "scripts": {
-    "dev": "vinext dev",
-    "build": "vinext build && node build/copy-static.mjs",
+    "dev": "node build/copy-static.mjs && vinext dev",
+    "build": "node build/copy-static.mjs && vinext build",
     "start": "vinext start",
     "preview": "vinext start"
   },
