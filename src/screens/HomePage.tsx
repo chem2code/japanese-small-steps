@@ -1,55 +1,11 @@
-import { useState } from 'react'
-import { ArrowRight, BookOpen, Check, Clock3, Flame, Headphones, Languages, MapPin, Play, Sparkles, Target } from 'lucide-react'
+import { ArrowRight, BookOpen, Check, Clock3, Flame, Headphones, Languages, Play } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { beginnerLessons } from '../data'
 import { plainJapanese } from '../content'
-import type { StudyController, StudyGoal } from '../study'
-
-const goals: { value: StudyGoal; icon: typeof MapPin; title: string; copy: string }[] = [
-  { value: 'travel', icon: MapPin, title: '旅行交流', copy: '优先掌握问路、点餐与购物' },
-  { value: 'daily', icon: Languages, title: '生活会话', copy: '建立日常开口表达的基础' },
-  { value: 'exam', icon: Target, title: '系统入门', copy: '稳步打好词汇与语法基础' },
-]
+import type { StudyController } from '../study'
 
 export function HomePage({ study }: { study: StudyController }) {
-  const [goal, setGoal] = useState<StudyGoal>('daily')
-  const [minutes, setMinutes] = useState<10 | 15 | 25>(15)
   const nextLesson = beginnerLessons[study.currentDay.lessonId - 1] || beginnerLessons[0]
-
-  if (!study.profile) {
-    return (
-      <div className="page onboarding-page">
-        <section className="onboarding-card">
-          <div className="onboarding-copy">
-            <span className="eyebrow">START YOUR 30 DAYS</span>
-            <h1>先用一分钟，定制你的学习路线。</h1>
-            <p>不需要一次学很多。选择目标和每天可投入的时间，我们会安排第一步。</p>
-            <div className="onboarding-promise"><Sparkles size={18} /><span><b>第一天就能开口</b><small>完成自我介绍、听读和5词复习</small></span></div>
-          </div>
-          <div className="onboarding-form">
-            <fieldset>
-              <legend>你最想用日语做什么？</legend>
-              <div className="goal-options">
-                {goals.map(({ value, icon: Icon, title, copy }) => (
-                  <button className={goal === value ? 'selected' : ''} key={value} onClick={() => setGoal(value)}>
-                    <Icon size={19} /><span><b>{title}</b><small>{copy}</small></span>{goal === value && <Check size={16} />}
-                  </button>
-                ))}
-              </div>
-            </fieldset>
-            <fieldset>
-              <legend>每天准备学多久？</legend>
-              <div className="minute-options">
-                {[10, 15, 25].map((value) => <button className={minutes === value ? 'selected' : ''} key={value} onClick={() => setMinutes(value as 10 | 15 | 25)}><b>{value}</b><span>分钟</span>{value === 15 && <small>推荐</small>}</button>)}
-              </div>
-            </fieldset>
-            <button className="button primary onboarding-submit" onClick={() => study.createProfile(goal, minutes)}>生成我的30天计划<ArrowRight size={17} /></button>
-            <p className="privacy-note">全部课程免费开放；学习设置和进度只保存在你的设备中。</p>
-          </div>
-        </section>
-      </div>
-    )
-  }
 
   return (
     <div className="page home-page">

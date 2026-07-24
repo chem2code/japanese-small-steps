@@ -4,14 +4,7 @@ import { wordsForLesson, type Word } from './lessonDetails'
 
 const STUDY_KEY = 'hyoga-study-v3'
 
-export type StudyGoal = 'travel' | 'daily' | 'exam'
 export type ReviewGrade = 'again' | 'hard' | 'good' | 'easy'
-
-export interface LearnerProfile {
-  goal: StudyGoal
-  minutes: 10 | 15 | 25
-  startedAt: string
-}
 
 export interface ReviewState {
   dueAt: string
@@ -21,14 +14,12 @@ export interface ReviewState {
 }
 
 interface StudyState {
-  profile: LearnerProfile | null
   completedDays: number[]
   review: Record<string, ReviewState>
   activityDates: string[]
 }
 
 const initialState: StudyState = {
-  profile: null,
   completedDays: [],
   review: {},
   activityDates: [],
@@ -94,14 +85,6 @@ export function useStudy() {
   useEffect(() => {
     localStorage.setItem(STUDY_KEY, JSON.stringify(state))
   }, [state])
-
-  const createProfile = useCallback((goal: StudyGoal, minutes: 10 | 15 | 25) => {
-    setState((current) => ({
-      ...current,
-      profile: { goal, minutes, startedAt: new Date().toISOString() },
-      activityDates: Array.from(new Set([...current.activityDates, today()])),
-    }))
-  }, [])
 
   const toggleDay = useCallback((day: number) => {
     setState((current) => {
@@ -188,7 +171,6 @@ export function useStudy() {
     currentWords,
     dueWords,
     streak,
-    createProfile,
     toggleDay,
     gradeWord,
     lessonCompleted: state.completedDays.some((day) => lessonKey('beginner', day) === lessonKey('beginner', currentDay.lessonId)),
