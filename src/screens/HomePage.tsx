@@ -1,48 +1,82 @@
-import { ArrowRight, BookOpen, Check, Clock3, Headphones, Languages, Play } from 'lucide-react'
+import { useState } from 'react'
+import { ArrowRight, BookOpen, Check, Clock3, Flame, Headphones, Languages, MapPin, Play, Sparkles, Target } from 'lucide-react'
 import { Link } from 'react-router-dom'
-import { beginnerLessons, lessonKey } from '../data'
+import { beginnerLessons } from '../data'
 import { plainJapanese } from '../content'
+import type { StudyController, StudyGoal } from '../study'
 
-interface Progress {
-  completed: string[]
-  toggle: (key: string) => void
-}
+const goals: { value: StudyGoal; icon: typeof MapPin; title: string; copy: string }[] = [
+  { value: 'travel', icon: MapPin, title: '旅行交流', copy: '优先掌握问路、点餐与购物' },
+  { value: 'daily', icon: Languages, title: '生活会话', copy: '建立日常开口表达的基础' },
+  { value: 'exam', icon: Target, title: '系统入门', copy: '稳步打好词汇与语法基础' },
+]
 
-export function HomePage({ progress }: { progress: Progress }) {
-  const completedBeginner = beginnerLessons.filter((lesson) =>
-    progress.completed.includes(lessonKey('beginner', lesson.id)),
-  ).length
-  const nextLesson = beginnerLessons.find(
-    (lesson) => !progress.completed.includes(lessonKey('beginner', lesson.id)),
-  ) || beginnerLessons[0]
-  const percent = Math.round((completedBeginner / beginnerLessons.length) * 100)
+export function HomePage({ study }: { study: StudyController }) {
+  const [goal, setGoal] = useState<StudyGoal>('daily')
+  const [minutes, setMinutes] = useState<10 | 15 | 25>(15)
+  const nextLesson = beginnerLessons[study.currentDay.lessonId - 1] || beginnerLessons[0]
+
+  if (!study.profile) {
+    return (
+      <div className="page onboarding-page">
+        <section className="onboarding-card">
+          <div className="onboarding-copy">
+            <span className="eyebrow">START YOUR 30 DAYS</span>
+            <h1>先用一分钟，定制你的学习路线。</h1>
+            <p>不需要一次学很多。选择目标和每天可投入的时间，我们会安排第一步。</p>
+            <div className="onboarding-promise"><Sparkles size={18} /><span><b>第一天就能开口</b><small>完成自我介绍、听读和5词复习</small></span></div>
+          </div>
+          <div className="onboarding-form">
+            <fieldset>
+              <legend>你最想用日语做什么？</legend>
+              <div className="goal-options">
+                {goals.map(({ value, icon: Icon, title, copy }) => (
+                  <button className={goal === value ? 'selected' : ''} key={value} onClick={() => setGoal(value)}>
+                    <Icon size={19} /><span><b>{title}</b><small>{copy}</small></span>{goal === value && <Check size={16} />}
+                  </button>
+                ))}
+              </div>
+            </fieldset>
+            <fieldset>
+              <legend>每天准备学多久？</legend>
+              <div className="minute-options">
+                {[10, 15, 25].map((value) => <button className={minutes === value ? 'selected' : ''} key={value} onClick={() => setMinutes(value as 10 | 15 | 25)}><b>{value}</b><span>分钟</span>{value === 15 && <small>推荐</small>}</button>)}
+              </div>
+            </fieldset>
+            <button className="button primary onboarding-submit" onClick={() => study.createProfile(goal, minutes)}>生成我的30天计划<ArrowRight size={17} /></button>
+            <p className="privacy-note">当前为内测版，学习设置只保存在你的设备中。</p>
+          </div>
+        </section>
+      </div>
+    )
+  }
 
   return (
     <div className="page home-page">
       <section className="hero">
         <div className="hero-copy">
-          <span className="eyebrow">日本語を、毎日の習慣に</span>
-          <h1>轻松学日语，<br /><em>每天进步一点点。</em></h1>
-          <p>为中文初学者重新设计的《标准日本语》学习体验。每次只学一个目标，把课文、句型与词汇真正串起来。</p>
+          <span className="eyebrow">DAY {String(study.currentDay.day).padStart(2, '0')} · 你的今日任务</span>
+          <h1>每天15分钟，<br /><em>真正记住日语。</em></h1>
+          <p>今天只完成一个明确目标：{study.currentDay.focus}。理解、练习、复习，形成完整学习闭环。</p>
           <div className="hero-actions">
             <Link className="button primary" to={`/lesson/beginner/${nextLesson.id}`}>
-              {completedBeginner ? '继续学习' : '开始第一课'} <ArrowRight size={17} />
+              {study.completedDays.length ? '继续学习' : '开始第一课'} <ArrowRight size={17} />
             </Link>
-            <Link className="button secondary" to="/courses">查看学习路线</Link>
+            <Link className="button secondary" to="/plan">查看30天计划</Link>
           </div>
           <div className="trust-row">
-            <span><Check size={14} /> 无需注册</span>
-            <span><Check size={14} /> 学习进度自动保存</span>
-            <span><Check size={14} /> 中日双语内容</span>
+            <span><Flame size={14} /> 连续学习 {study.streak} 天</span>
+            <span><Check size={14} /> 已完成 {study.completedDays.length} 天</span>
+            <span><Check size={14} /> {study.dueWords.length} 个词待复习</span>
           </div>
         </div>
         <div className="focus-card">
           <div className="focus-card-head">
             <span>今日学习</span><small>约 15 分钟</small>
           </div>
-          <div className="lesson-number">LESSON {String(nextLesson.id).padStart(2, '0')}</div>
+          <div className="lesson-number">DAY {String(study.currentDay.day).padStart(2, '0')} · LESSON {String(nextLesson.id).padStart(2, '0')}</div>
           <div className="focus-japanese" dangerouslySetInnerHTML={{ __html: plainJapanese(nextLesson.title) }} />
-          <p>{nextLesson.id === 1 ? '学会自我介绍与第一次见面的表达' : '继续你的初级日语学习路线'}</p>
+          <p>{study.currentDay.focus}</p>
           <div className="focus-tasks">
             <span><BookOpen size={16} /> 理解核心句型</span>
             <span><Headphones size={16} /> 跟读应用课文</span>
@@ -51,8 +85,8 @@ export function HomePage({ progress }: { progress: Progress }) {
           <Link to={`/lesson/beginner/${nextLesson.id}`} className="focus-play">
             <Play size={17} fill="currentColor" /> 开始今日学习
           </Link>
-          <div className="progress-meta"><span>初级进度</span><b>{completedBeginner} / 48</b></div>
-          <div className="progress-track"><i style={{ width: `${Math.max(percent, 2)}%` }} /></div>
+          <div className="progress-meta"><span>30天计划</span><b>{study.completedDays.length} / 30</b></div>
+          <div className="progress-track"><i style={{ width: `${Math.max((study.completedDays.length / 30) * 100, 2)}%` }} /></div>
         </div>
       </section>
 
@@ -79,9 +113,9 @@ export function HomePage({ progress }: { progress: Progress }) {
             <span className="path-icon">話</span><small>STEP 02 · 完成初级后</small><h3>中级进阶</h3>
             <p>提升阅读表达，理解自然的日语语境。</p><b>32 课 <ArrowRight size={14} /></b>
           </Link>
-          <Link className="path-card mint" to="/courses">
+          <Link className="path-card mint" to="/review">
             <span className="path-icon"><Clock3 size={22} /></span><small>DAILY · 每天复习</small><h3>短时学习</h3>
-            <p>每次 15–25 分钟，减少记忆负担。</p><b>查看计划 <ArrowRight size={14} /></b>
+            <p>根据记忆情况安排到期词汇，避免无效重复。</p><b>开始复习 <ArrowRight size={14} /></b>
           </Link>
         </div>
       </section>

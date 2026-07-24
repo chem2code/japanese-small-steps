@@ -12,6 +12,7 @@ import { japaneseMarkup, kanaReading, plainJapanese, renderContent } from '../co
 import { exportLessonToAnki } from '../anki'
 import { getLessonMedia } from '../lessonMedia'
 import { FlashcardStudy } from '../components/FlashcardStudy'
+import type { StudyController } from '../study'
 
 interface Progress { completed: string[]; toggle: (key: string) => void }
 
@@ -47,7 +48,7 @@ function LessonAudio({ src, label, helper, audioRef: providedRef }: { src: strin
   )
 }
 
-export function LessonPage({ progress }: { progress: Progress }) {
+export function LessonPage({ progress, study }: { progress: Progress; study: StudyController }) {
   const params = useParams()
   const level = (params.level === 'intermediate' ? 'intermediate' : 'beginner') as Level
   const id = Number(params.id || 1)
@@ -119,6 +120,12 @@ export function LessonPage({ progress }: { progress: Progress }) {
     exportLessonToAnki(lessonWords, level, id, lesson.title)
     setExported(true)
     window.setTimeout(() => setExported(false), 2_500)
+  }
+
+  const completeLesson = () => {
+    if (!completed) progress.toggle(key)
+    const planDay = Math.min(id, 30)
+    if (!study.completedDays.includes(planDay)) study.toggleDay(planDay)
   }
 
   return (
@@ -201,7 +208,7 @@ export function LessonPage({ progress }: { progress: Progress }) {
 
           <div className="lesson-finish">
             <div><CheckCircle2 size={29} /><span><strong>完成本课了吗？</strong><small>标记后，学习进度会保存在这台设备上。</small></span></div>
-            <button className={completed ? 'completed' : ''} onClick={() => progress.toggle(key)}>{completed ? '取消完成' : '完成本课'}</button>
+            <button className={completed ? 'completed' : ''} onClick={completeLesson}>{completed ? '已完成本课' : '完成并进入练习'}</button>
           </div>
           <nav className="lesson-pagination">
             {previous ? <Link to={`/lesson/${level}/${previous}`}><ArrowLeft />第 {previous} 课</Link> : <span />}
