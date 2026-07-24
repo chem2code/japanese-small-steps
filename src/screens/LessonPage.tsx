@@ -68,15 +68,15 @@ export function LessonPage({ progress, study }: { progress: Progress; study: Stu
   const lessonGrammar = useMemo(() => level === 'beginner' ? grammarForLesson(id) : [], [id, level])
   const lessonAudioRef = useRef<HTMLAudioElement>(null)
   const wordAudioRef = useRef<HTMLAudioElement>(null)
-  const speechTokenRef = useRef(0)
+  const wordItemAudioRef = useRef<HTMLAudioElement>(null)
   const [activeWord, setActiveWord] = useState<number | null>(null)
   const [studyOpen, setStudyOpen] = useState(false)
   const [exported, setExported] = useState(false)
 
-  useEffect(() => () => {
-    speechTokenRef.current += 1
-    if ('speechSynthesis' in window) window.speechSynthesis.cancel()
-  }, [])
+  useEffect(() => {
+    wordItemAudioRef.current?.pause()
+    setActiveWord(null)
+  }, [id, level])
 
   if (!lesson) return <div className="page empty-state">没有找到这节课程。<Link to="/courses">返回课程地图</Link></div>
 
@@ -87,20 +87,23 @@ export function LessonPage({ progress, study }: { progress: Progress; study: Stu
   const previous = id > 1 ? id - 1 : null
   const next = id < lessons.length ? id + 1 : null
 
-  const cancelWordSpeech = () => {
-    speechTokenRef.current += 1
-    if ('speechSynthesis' in window) window.speechSynthesis.cancel()
+  const stopWordAudio = () => {
+    const audio = wordItemAudioRef.current
+    if (audio) {
+      audio.pause()
+      audio.currentTime = 0
+    }
     setActiveWord(null)
   }
 
   const handleLessonTrackPlay = () => {
     wordAudioRef.current?.pause()
-    cancelWordSpeech()
+    stopWordAudio()
   }
 
   const handleWordTrackPlay = () => {
     lessonAudioRef.current?.pause()
-    cancelWordSpeech()
+    stopWordAudio()
   }
 
   const playLessonAudio = () => {
@@ -113,24 +116,16 @@ export function LessonPage({ progress, study }: { progress: Progress; study: Stu
 
   const playWordAudio = (index: number) => {
     const word = lessonWords[index]
-    if (!word || !('speechSynthesis' in window)) return
+    const audio = wordItemAudioRef.current
+    if (!word || !audio) return
 
     lessonAudioRef.current?.pause()
     wordAudioRef.current?.pause()
-    cancelWordSpeech()
-
-    const token = ++speechTokenRef.current
-    const text = word.kana.replace(/@\d*/g, '').trim() || plainJapanese(word.word || word.kanji)
-    const utterance = new SpeechSynthesisUtterance(text)
-    const japaneseVoice = window.speechSynthesis.getVoices().find((voice) => voice.lang.toLowerCase().startsWith('ja'))
-    utterance.lang = 'ja-JP'
-    utterance.rate = 0.9
-    if (japaneseVoice) utterance.voice = japaneseVoice
-    utterance.onend = utterance.onerror = () => {
-      if (speechTokenRef.current === token) setActiveWord(null)
-    }
+    stopWordAudio()
+    audio.src = assetUrl(`/assets/audio/word-items/l${id}/${index}.mp3`)
+    audio.playbackRate = 1
     setActiveWord(index)
-    window.speechSynthesis.speak(utterance)
+    void audio.play().catch(() => setActiveWord(null))
   }
 
   const exportAnki = () => {
@@ -221,6 +216,12 @@ export function LessonPage({ progress, study }: { progress: Progress; study: Stu
               src={assetUrl(`/assets/audio/word/${audioPrefix}${id}.mp3`)}
               label="整课单词录音"
               helper={activeWord === null ? '可连续听整课词表；点击下方单词可单独朗读' : `正在朗读：${plainJapanese(lessonWords[activeWord]?.word || lessonWords[activeWord]?.kana || '')}`}
+            />
+            <audio
+              ref={wordItemAudioRef}
+              preload="none"
+              onEnded={() => setActiveWord(null)}
+              onError={() => setActiveWord(null)}
             />
             <div className="word-grid">{lessonWords.map((word, index) => <button className={`word-card ${activeWord === index ? 'is-speaking' : ''}`} key={`${word.lesson}-${index}`} onClick={() => playWordAudio(index)}><span dangerouslySetInnerHTML={{ __html: japaneseMarkup(word.word || word.kanji) }} /><small>{word.kana.replace(/@\d*/g, '')}</small><b>{word.desc}</b><Volume2 size={14} /></button>)}</div>
           </section>}
