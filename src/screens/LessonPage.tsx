@@ -85,6 +85,13 @@ export function LessonPage({ progress, study }: { progress: Progress; study: Stu
   const playLessonAudio = () => {
     const audio = lessonAudioRef.current
     if (!audio) return
+    const wordAudio = wordAudioRef.current
+    if (wordAudio) wordAudio.pause()
+    if (wordAudio && wordStopHandlerRef.current) {
+      wordAudio.removeEventListener('timeupdate', wordStopHandlerRef.current)
+      wordStopHandlerRef.current = null
+    }
+    setActiveWord(null)
     audio.currentTime = 0
     void audio.play()
   }
@@ -92,6 +99,7 @@ export function LessonPage({ progress, study }: { progress: Progress; study: Stu
   const playWordAudio = (index: number) => {
     const audio = wordAudioRef.current
     if (!audio || !Number.isFinite(audio.duration) || lessonWords.length === 0) return
+    lessonAudioRef.current?.pause()
 
     if (wordStopHandlerRef.current) {
       audio.removeEventListener('timeupdate', wordStopHandlerRef.current)
