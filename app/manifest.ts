@@ -2,8 +2,8 @@ import type { MetadataRoute } from 'next'
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: '氷河日本語',
-    short_name: '氷河日本語',
+    name: '日语小步',
+    short_name: '日语小步',
     description: '面向中文初学者的现代日语学习应用',
     start_url: '/',
     display: 'standalone',

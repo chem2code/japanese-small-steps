@@ -40,8 +40,8 @@ export default function App() {
       <a className="skip-link" href="#main">跳到正文</a>
       <aside className={`sidebar ${menuOpen ? 'is-open' : ''}`}>
         <Link className="brand" to="/" onClick={() => setMenuOpen(false)}>
-          <span className="brand-mark">氷</span>
-          <span><strong>氷河日本語</strong><small>Japanese, one day at a time.</small></span>
+          <span className="brand-mark">歩</span>
+          <span><strong>日语小步</strong><small>每天一小步，日语更进一步。</small></span>
         </Link>
         <nav className="sidebar-nav">
           <span className="nav-heading">学习</span>
@@ -65,7 +65,7 @@ export default function App() {
       {menuOpen && <button className="menu-overlay" aria-label="关闭菜单" onClick={() => setMenuOpen(false)} />}
       <div className="app-main">
         <header className="mobile-header">
-          <Link to="/" className="mobile-brand">氷河<span>日本語</span></Link>
+          <Link to="/" className="mobile-brand">日语<span>小步</span></Link>
           <button className="icon-button" onClick={() => setMenuOpen((value) => !value)} aria-label="打开菜单">
             {menuOpen ? <X /> : <Menu />}
           </button>

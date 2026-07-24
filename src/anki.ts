@@ -11,8 +11,8 @@ export function exportLessonToAnki(
   lessonTitle: string,
 ) {
   const levelName = level === 'beginner' ? '初级' : '中级'
-  const deckName = `氷河日本語::${levelName}::第${lessonId}课`
-  const tags = `hyoga_japanese ${level} lesson_${lessonId}`
+  const deckName = `日语小步::${levelName}::第${lessonId}课`
+  const tags = `japanese_small_steps ${level} lesson_${lessonId}`
   const directives = [
     '#separator:Tab',
     '#html:true',
@@ -41,7 +41,7 @@ export function exportLessonToAnki(
   const url = URL.createObjectURL(file)
   const link = document.createElement('a')
   link.href = url
-  link.download = `hyoga-${level}-lesson-${lessonId}-anki.txt`
+  link.download = `japanese-small-steps-${level}-lesson-${lessonId}-anki.txt`
   document.body.appendChild(link)
   link.click()
   link.remove()

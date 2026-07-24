@@ -1,5 +1,5 @@
 {
-  "name": "hyoga-japanese",
+  "name": "japanese-small-steps",
   "private": true,
   "version": "2.0.0",
   "type": "module",
@@ -9,6 +9,7 @@
   "scripts": {
     "dev": "node build/copy-static.mjs && vinext dev",
     "build": "node build/copy-static.mjs && vinext build && node build/finalize-build.mjs",
+    "build:pages": "node build/copy-static.mjs && vite build --config vite.pages.config.ts",
     "start": "vinext start",
     "preview": "vinext start"
   },
