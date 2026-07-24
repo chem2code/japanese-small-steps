@@ -21,7 +21,7 @@ function ContentBlock({ source }: { source: string }) {
   return <div className="formatted-content" dangerouslySetInnerHTML={{ __html: renderContent(source) }} />
 }
 
-function LessonAudio({ src, label, helper, audioRef: providedRef }: { src: string; label: string; helper: string; audioRef?: RefObject<HTMLAudioElement | null> }) {
+function LessonAudio({ src, label, helper, audioRef: providedRef, onPlay }: { src: string; label: string; helper: string; audioRef?: RefObject<HTMLAudioElement | null>; onPlay?: () => void }) {
   const internalRef = useRef<HTMLAudioElement>(null)
   const audioRef = providedRef || internalRef
   const [rate, setRate] = useState(1)
@@ -44,7 +44,7 @@ function LessonAudio({ src, label, helper, audioRef: providedRef }: { src: strin
           ))}
         </div>
       </div>
-      <audio ref={audioRef} controls preload="metadata" src={src}>你的浏览器不支持音频播放。</audio>
+      <audio ref={audioRef} controls preload="metadata" src={src} onPlay={onPlay}>你的浏览器不支持音频播放。</audio>
     </div>
   )
 }
@@ -68,10 +68,15 @@ export function LessonPage({ progress, study }: { progress: Progress; study: Stu
   const lessonGrammar = useMemo(() => level === 'beginner' ? grammarForLesson(id) : [], [id, level])
   const lessonAudioRef = useRef<HTMLAudioElement>(null)
   const wordAudioRef = useRef<HTMLAudioElement>(null)
-  const wordStopHandlerRef = useRef<(() => void) | null>(null)
+  const speechTokenRef = useRef(0)
   const [activeWord, setActiveWord] = useState<number | null>(null)
   const [studyOpen, setStudyOpen] = useState(false)
   const [exported, setExported] = useState(false)
+
+  useEffect(() => () => {
+    speechTokenRef.current += 1
+    if ('speechSynthesis' in window) window.speechSynthesis.cancel()
+  }, [])
 
   if (!lesson) return <div className="page empty-state">没有找到这节课程。<Link to="/courses">返回课程地图</Link></div>
 
@@ -82,47 +87,50 @@ export function LessonPage({ progress, study }: { progress: Progress; study: Stu
   const previous = id > 1 ? id - 1 : null
   const next = id < lessons.length ? id + 1 : null
 
+  const cancelWordSpeech = () => {
+    speechTokenRef.current += 1
+    if ('speechSynthesis' in window) window.speechSynthesis.cancel()
+    setActiveWord(null)
+  }
+
+  const handleLessonTrackPlay = () => {
+    wordAudioRef.current?.pause()
+    cancelWordSpeech()
+  }
+
+  const handleWordTrackPlay = () => {
+    lessonAudioRef.current?.pause()
+    cancelWordSpeech()
+  }
+
   const playLessonAudio = () => {
     const audio = lessonAudioRef.current
     if (!audio) return
-    const wordAudio = wordAudioRef.current
-    if (wordAudio) wordAudio.pause()
-    if (wordAudio && wordStopHandlerRef.current) {
-      wordAudio.removeEventListener('timeupdate', wordStopHandlerRef.current)
-      wordStopHandlerRef.current = null
-    }
-    setActiveWord(null)
+    handleLessonTrackPlay()
     audio.currentTime = 0
     void audio.play()
   }
 
   const playWordAudio = (index: number) => {
-    const audio = wordAudioRef.current
-    if (!audio || !Number.isFinite(audio.duration) || lessonWords.length === 0) return
+    const word = lessonWords[index]
+    if (!word || !('speechSynthesis' in window)) return
+
     lessonAudioRef.current?.pause()
+    wordAudioRef.current?.pause()
+    cancelWordSpeech()
 
-    if (wordStopHandlerRef.current) {
-      audio.removeEventListener('timeupdate', wordStopHandlerRef.current)
+    const token = ++speechTokenRef.current
+    const text = word.kana.replace(/@\d*/g, '').trim() || plainJapanese(word.word || word.kanji)
+    const utterance = new SpeechSynthesisUtterance(text)
+    const japaneseVoice = window.speechSynthesis.getVoices().find((voice) => voice.lang.toLowerCase().startsWith('ja'))
+    utterance.lang = 'ja-JP'
+    utterance.rate = 0.9
+    if (japaneseVoice) utterance.voice = japaneseVoice
+    utterance.onend = utterance.onerror = () => {
+      if (speechTokenRef.current === token) setActiveWord(null)
     }
-
-    const segmentLength = audio.duration / lessonWords.length
-    const start = index * segmentLength
-    const end = Math.min(audio.duration, (index + 1) * segmentLength)
-    const stopHandler = () => {
-      if (audio.currentTime >= end - 0.05) {
-        audio.pause()
-        audio.removeEventListener('timeupdate', stopHandler)
-        wordStopHandlerRef.current = null
-        setActiveWord(null)
-      }
-    }
-
-    wordStopHandlerRef.current = stopHandler
-    audio.addEventListener('timeupdate', stopHandler)
-    audio.playbackRate = 1
-    audio.currentTime = start
     setActiveWord(index)
-    void audio.play()
+    window.speechSynthesis.speak(utterance)
   }
 
   const exportAnki = () => {
@@ -173,6 +181,7 @@ export function LessonPage({ progress, study }: { progress: Progress; study: Stu
             </div>
             <LessonAudio
               audioRef={lessonAudioRef}
+              onPlay={handleLessonTrackPlay}
               src={assetUrl(`/assets/audio/lesson/${audioPrefix}${id}.mp3`)}
               label="课文录音"
               helper="建议先听一遍，再用 0.8× 逐句跟读"
@@ -208,9 +217,10 @@ export function LessonPage({ progress, study }: { progress: Progress; study: Stu
             </div>
             <LessonAudio
               audioRef={wordAudioRef}
+              onPlay={handleWordTrackPlay}
               src={assetUrl(`/assets/audio/word/${audioPrefix}${id}.mp3`)}
-              label="单词录音"
-              helper={activeWord === null ? '点击下方单词，可播放对应的真人读音' : `正在播放：${plainJapanese(lessonWords[activeWord]?.word || lessonWords[activeWord]?.kana || '')}`}
+              label="整课单词录音"
+              helper={activeWord === null ? '可连续听整课词表；点击下方单词可单独朗读' : `正在朗读：${plainJapanese(lessonWords[activeWord]?.word || lessonWords[activeWord]?.kana || '')}`}
             />
             <div className="word-grid">{lessonWords.map((word, index) => <button className={`word-card ${activeWord === index ? 'is-speaking' : ''}`} key={`${word.lesson}-${index}`} onClick={() => playWordAudio(index)}><span dangerouslySetInnerHTML={{ __html: japaneseMarkup(word.word || word.kanji) }} /><small>{word.kana.replace(/@\d*/g, '')}</small><b>{word.desc}</b><Volume2 size={14} /></button>)}</div>
           </section>}
