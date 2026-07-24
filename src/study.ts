@@ -40,7 +40,6 @@ export interface PlanDay {
   label: string
   focus: string
   minutes: number
-  free: boolean
 }
 
 const focuses = [
@@ -66,7 +65,6 @@ export const thirtyDayPlan: PlanDay[] = Array.from({ length: 30 }, (_, index) =>
     label: day % 7 === 0 ? `第 ${Math.ceil(day / 7)} 周复盘` : `第 ${lessonId} 课`,
     focus: day % 7 === 0 ? '回顾本周高频词和核心句型' : focuses[index % focuses.length],
     minutes: day % 7 === 0 ? 12 : 15,
-    free: day <= 3,
   }
 })
 

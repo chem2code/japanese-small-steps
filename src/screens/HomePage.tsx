@@ -44,7 +44,7 @@ export function HomePage({ study }: { study: StudyController }) {
               </div>
             </fieldset>
             <button className="button primary onboarding-submit" onClick={() => study.createProfile(goal, minutes)}>生成我的30天计划<ArrowRight size={17} /></button>
-            <p className="privacy-note">当前为内测版，学习设置只保存在你的设备中。</p>
+            <p className="privacy-note">全部课程免费开放；学习设置和进度只保存在你的设备中。</p>
           </div>
         </section>
       </div>

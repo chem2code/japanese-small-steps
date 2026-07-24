@@ -1,4 +1,4 @@
-import { CalendarDays, Check, ChevronRight, Clock3, LockKeyhole, Sparkles } from 'lucide-react'
+import { Check, ChevronRight, Clock3, Sparkles } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { thirtyDayPlan, type StudyController } from '../study'
 
@@ -38,7 +38,6 @@ export function PlanPage({ study }: { study: StudyController }) {
                       <span className="day-check">{completed ? <Check size={16} /> : day.day}</span>
                       <div><b>DAY {String(day.day).padStart(2, '0')} · {day.label}</b><strong>{day.focus}</strong></div>
                       <small><Clock3 size={13} /> {day.minutes} 分钟</small>
-                      {!day.free && <LockKeyhole className="tier-lock" size={14} />}
                       <ChevronRight size={17} />
                     </Link>
                   )
@@ -48,7 +47,7 @@ export function PlanPage({ study }: { study: StudyController }) {
           )
         })}
       </div>
-      <aside className="beta-note"><Sparkles size={18} /><p><strong>内测说明</strong><span>前3天为免费体验；其余课程将在正式销售版通过购买资格解锁。</span></p></aside>
+      <aside className="beta-note"><Sparkles size={18} /><p><strong>开放说明</strong><span>全部课程、课文录音、单词录音、复习与 Anki 导出功能均免费开放。</span></p></aside>
     </div>
   )
 }

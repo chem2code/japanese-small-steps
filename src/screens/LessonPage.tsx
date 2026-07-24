@@ -10,6 +10,7 @@ import {
 import { grammarForLesson, wordsForLesson } from '../lessonDetails'
 import { japaneseMarkup, kanaReading, plainJapanese, renderContent } from '../content'
 import { exportLessonToAnki } from '../anki'
+import { assetUrl } from '../assetUrl'
 import { getLessonMedia } from '../lessonMedia'
 import { FlashcardStudy } from '../components/FlashcardStudy'
 import type { StudyController } from '../study'
@@ -152,7 +153,7 @@ export function LessonPage({ progress, study }: { progress: Progress; study: Stu
             <p>{level === 'beginner' ? '本课建议用 20 分钟完成：先理解句型，再跟读课文，最后复习词汇。' : `会话：${plainJapanese(lesson.sceneTitle)}`}</p>
             {lessonMedia && (
               <figure className="lesson-visual">
-                <img src={lessonMedia.src} alt={lessonMedia.alt} loading="lazy" decoding="async" />
+                <img src={assetUrl(lessonMedia.src)} alt={lessonMedia.alt} loading="lazy" decoding="async" />
                 <figcaption>{lessonMedia.caption}</figcaption>
               </figure>
             )}
@@ -164,7 +165,7 @@ export function LessonPage({ progress, study }: { progress: Progress; study: Stu
             </div>
             <LessonAudio
               audioRef={lessonAudioRef}
-              src={`/assets/audio/lesson/${audioPrefix}${id}.mp3`}
+              src={assetUrl(`/assets/audio/lesson/${audioPrefix}${id}.mp3`)}
               label="课文录音"
               helper="建议先听一遍，再用 0.8× 逐句跟读"
             />
@@ -199,7 +200,7 @@ export function LessonPage({ progress, study }: { progress: Progress; study: Stu
             </div>
             <LessonAudio
               audioRef={wordAudioRef}
-              src={`/assets/audio/word/${audioPrefix}${id}.mp3`}
+              src={assetUrl(`/assets/audio/word/${audioPrefix}${id}.mp3`)}
               label="单词录音"
               helper={activeWord === null ? '点击下方单词，可播放对应的真人读音' : `正在播放：${plainJapanese(lessonWords[activeWord]?.word || lessonWords[activeWord]?.kana || '')}`}
             />
