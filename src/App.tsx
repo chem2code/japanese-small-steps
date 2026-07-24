@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState } from 'react'
+import { useState } from 'react'
 import { Link, NavLink, Navigate, Route, Routes } from 'react-router-dom'
 import {
   BookOpen,
@@ -14,13 +14,12 @@ import {
 } from 'lucide-react'
 import { useProgress } from './useProgress'
 import { useStudy } from './study'
-
-const HomePage = lazy(() => import('./screens/HomePage').then((module) => ({ default: module.HomePage })))
-const CoursesPage = lazy(() => import('./screens/CoursesPage').then((module) => ({ default: module.CoursesPage })))
-const LessonPage = lazy(() => import('./screens/LessonPage').then((module) => ({ default: module.LessonPage })))
-const PlanPage = lazy(() => import('./screens/PlanPage').then((module) => ({ default: module.PlanPage })))
-const ReviewPage = lazy(() => import('./screens/ReviewPage').then((module) => ({ default: module.ReviewPage })))
-const PracticePage = lazy(() => import('./screens/PracticePage').then((module) => ({ default: module.PracticePage })))
+import { HomePage } from './screens/HomePage'
+import { CoursesPage } from './screens/CoursesPage'
+import { LessonPage } from './screens/LessonPage'
+import { PlanPage } from './screens/PlanPage'
+import { ReviewPage } from './screens/ReviewPage'
+import { PracticePage } from './screens/PracticePage'
 
 const nav = [
   { to: '/', label: '学习首页', icon: Home, end: true },
@@ -71,18 +70,16 @@ export default function App() {
           </button>
         </header>
         <main id="main">
-          <Suspense fallback={<div className="route-loading"><span>読み込み中</span><p>正在准备学习内容…</p></div>}>
-            <Routes>
-              <Route path="/" element={<HomePage study={study} />} />
-              <Route path="/plan" element={<PlanPage study={study} />} />
-              <Route path="/practice" element={<PracticePage study={study} />} />
-              <Route path="/review" element={<ReviewPage study={study} />} />
-              <Route path="/courses" element={<CoursesPage progress={progress} />} />
-              <Route path="/lesson/:level/:id" element={<LessonPage progress={progress} study={study} />} />
-              <Route path="/library" element={<Navigate to="/courses" replace />} />
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
-          </Suspense>
+          <Routes>
+            <Route path="/" element={<HomePage study={study} />} />
+            <Route path="/plan" element={<PlanPage study={study} />} />
+            <Route path="/practice" element={<PracticePage study={study} />} />
+            <Route path="/review" element={<ReviewPage study={study} />} />
+            <Route path="/courses" element={<CoursesPage progress={progress} />} />
+            <Route path="/lesson/:level/:id" element={<LessonPage progress={progress} study={study} />} />
+            <Route path="/library" element={<Navigate to="/courses" replace />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
         </main>
       </div>
     </div>
