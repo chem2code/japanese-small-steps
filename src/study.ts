@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { beginnerLessons, lessonKey } from './data'
+import { beginnerLessons } from './data'
 import { wordsForLesson, type Word } from './lessonDetails'
 
 const STUDY_KEY = 'hyoga-study-v3'
@@ -24,40 +24,6 @@ const initialState: StudyState = {
   review: {},
   activityDates: [],
 }
-
-export interface PlanDay {
-  day: number
-  lessonId: number
-  label: string
-  focus: string
-  minutes: number
-}
-
-const focuses = [
-  '认识日语句子的基本结构',
-  '掌握指示代词与常用名词',
-  '用地点词完成简单问答',
-  '练习时间、日期与数字',
-  '用动词描述每天的行动',
-  '表达来去与交通方式',
-  '练习“给、收、借”的说法',
-  '用形容词描述人和物',
-  '表达喜欢、擅长和理由',
-  '在生活场景中完成短对话',
-]
-
-export const thirtyDayPlan: PlanDay[] = Array.from({ length: 30 }, (_, index) => {
-  const day = index + 1
-  const lessonId = Math.min(day, beginnerLessons.length)
-  const lesson = beginnerLessons[lessonId - 1]
-  return {
-    day,
-    lessonId,
-    label: day % 7 === 0 ? `第 ${Math.ceil(day / 7)} 周复盘` : `第 ${lessonId} 课`,
-    focus: day % 7 === 0 ? '回顾本周高频词和核心句型' : focuses[index % focuses.length],
-    minutes: day % 7 === 0 ? 12 : 15,
-  }
-})
 
 export const wordId = (word: Word) =>
   `${word.lesson}:${word.word || word.kanji || word.kana}:${word.desc}`
@@ -86,11 +52,11 @@ export function useStudy() {
     localStorage.setItem(STUDY_KEY, JSON.stringify(state))
   }, [state])
 
-  const toggleDay = useCallback((day: number) => {
+  const toggleLesson = useCallback((lessonId: number) => {
     setState((current) => {
-      const completedDays = current.completedDays.includes(day)
-        ? current.completedDays.filter((item) => item !== day)
-        : [...current.completedDays, day].sort((a, b) => a - b)
+      const completedDays = current.completedDays.includes(lessonId)
+        ? current.completedDays.filter((item) => item !== lessonId)
+        : [...current.completedDays, lessonId].sort((a, b) => a - b)
       return {
         ...current,
         completedDays,
@@ -136,12 +102,14 @@ export function useStudy() {
     })
   }, [])
 
-  const currentDay = thirtyDayPlan.find((day) => !state.completedDays.includes(day.day)) || thirtyDayPlan[29]
-  const currentWords = useMemo(() => wordsForLesson(currentDay.lessonId).slice(0, 12), [currentDay.lessonId])
+  const currentLessonId =
+    beginnerLessons.find((lesson) => !state.completedDays.includes(lesson.id))?.id
+    ?? beginnerLessons.at(-1)?.id
+    ?? 1
+  const currentWords = useMemo(() => wordsForLesson(currentLessonId).slice(0, 12), [currentLessonId])
   const learnedWords = useMemo(
-    () => thirtyDayPlan
-      .filter((day) => state.completedDays.includes(day.day))
-      .flatMap((day) => wordsForLesson(day.lessonId))
+    () => state.completedDays
+      .flatMap((lessonId) => wordsForLesson(lessonId))
       .filter((word, index, all) => all.findIndex((item) => wordId(item) === wordId(word)) === index),
     [state.completedDays],
   )
@@ -167,13 +135,13 @@ export function useStudy() {
 
   return {
     ...state,
-    currentDay,
+    currentLessonId,
     currentWords,
     dueWords,
     streak,
-    toggleDay,
+    toggleLesson,
     gradeWord,
-    lessonCompleted: state.completedDays.some((day) => lessonKey('beginner', day) === lessonKey('beginner', currentDay.lessonId)),
+    lessonCompleted: state.completedDays.includes(currentLessonId),
   }
 }
 

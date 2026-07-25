@@ -3,9 +3,7 @@ import { Link, NavLink, Navigate, Route, Routes } from 'react-router-dom'
 import {
   BookOpen,
   Brain,
-  ChartNoAxesColumnIncreasing,
   ChevronRight,
-  CircleHelp,
   Dumbbell,
   Home,
   Menu,
@@ -14,16 +12,15 @@ import {
 } from 'lucide-react'
 import { useProgress } from './useProgress'
 import { useStudy } from './study'
+import { beginnerLessons, lessonKey } from './data'
 import { HomePage } from './screens/HomePage'
 import { CoursesPage } from './screens/CoursesPage'
 import { LessonPage } from './screens/LessonPage'
-import { PlanPage } from './screens/PlanPage'
 import { ReviewPage } from './screens/ReviewPage'
 import { PracticePage } from './screens/PracticePage'
 
 const nav = [
   { to: '/', label: '学习首页', icon: Home, end: true },
-  { to: '/plan', label: '30天计划', icon: ChartNoAxesColumnIncreasing },
   { to: '/practice', label: '即时练习', icon: Dumbbell },
   { to: '/review', label: '智能复习', icon: Brain },
   { to: '/courses', label: '课程资料库', icon: BookOpen },
@@ -33,6 +30,13 @@ export default function App() {
   const [menuOpen, setMenuOpen] = useState(false)
   const progress = useProgress()
   const study = useStudy()
+  const completedBeginner = beginnerLessons.filter((lesson) =>
+    progress.completed.includes(lessonKey('beginner', lesson.id)),
+  ).length
+  const nextLesson =
+    beginnerLessons.find((lesson) => !progress.completed.includes(lessonKey('beginner', lesson.id)))
+    ?? beginnerLessons.at(-1)
+    ?? beginnerLessons[0]!
 
   return (
     <div className="app-shell">
@@ -49,16 +53,12 @@ export default function App() {
               <Icon size={18} /><span>{label}</span><ChevronRight className="nav-arrow" size={14} />
             </NavLink>
           ))}
-          <span className="nav-heading secondary">帮助</span>
-          <Link to="/plan" onClick={() => setMenuOpen(false)}>
-            <CircleHelp size={18} /><span>学习方法</span><ChevronRight className="nav-arrow" size={14} />
-          </Link>
         </nav>
         <div className="daily-card">
           <Sparkles size={16} />
-          <span>今日进度</span>
-          <strong>DAY {String(study.currentDay.day).padStart(2, '0')}</strong>
-          <small>{study.dueWords.length} 个词等待复习</small>
+          <span>学习进度</span>
+          <strong>初级第 {nextLesson.id} 课</strong>
+          <small>已完成 {completedBeginner} / {beginnerLessons.length} 课</small>
         </div>
       </aside>
       {menuOpen && <button className="menu-overlay" aria-label="关闭菜单" onClick={() => setMenuOpen(false)} />}
@@ -71,8 +71,8 @@ export default function App() {
         </header>
         <main id="main">
           <Routes>
-            <Route path="/" element={<HomePage study={study} />} />
-            <Route path="/plan" element={<PlanPage study={study} />} />
+            <Route path="/" element={<HomePage study={study} progress={progress} />} />
+            <Route path="/plan" element={<Navigate to="/" replace />} />
             <Route path="/practice" element={<PracticePage study={study} />} />
             <Route path="/review" element={<ReviewPage study={study} />} />
             <Route path="/courses" element={<CoursesPage progress={progress} />} />

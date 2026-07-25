@@ -4,21 +4,21 @@ import '../src/styles.css'
 export const metadata: Metadata = {
   metadataBase: new URL('https://hyoga-japanese-learning.chenlianguu.chatgpt.site'),
   title: {
-    default: '日语小步 · 30天日语入门',
+    default: '日语小步 · 免费日语课程',
     template: '%s · 日语小步',
   },
-  description: '面向中文零基础学习者的30天日语入门计划。每天15分钟，从听懂到开口。',
+  description: '面向中文初学者的免费日语学习工具。课程、读音、复习与进度记录全部开放。',
   applicationName: '日语小步',
   openGraph: {
-    title: '30天日语入门 · 日语小步',
-    description: '每天15分钟，从听懂到开口。',
+    title: '免费日语课程 · 日语小步',
+    description: '打开即继续学习，免费使用课程、读音、复习与进度记录。',
     type: 'website',
-    images: [{ url: '/og.png', width: 1536, height: 1024, alt: '30天日语入门，每天15分钟，从听懂到开口' }],
+    images: [{ url: '/og.png', width: 1536, height: 1024, alt: '日语小步免费日语课程' }],
   },
   twitter: {
     card: 'summary_large_image',
-    title: '30天日语入门 · 日语小步',
-    description: '每天15分钟，从听懂到开口。',
+    title: '免费日语课程 · 日语小步',
+    description: '打开即继续学习，免费使用课程、读音、复习与进度记录。',
     images: ['/og.png'],
   },
 }

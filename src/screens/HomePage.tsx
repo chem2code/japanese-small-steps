@@ -1,77 +1,156 @@
-import { ArrowRight, BookOpen, Check, Clock3, Flame, Headphones, Languages, Play } from 'lucide-react'
+import { useRef, useState } from 'react'
+import {
+  ArrowRight,
+  BookOpen,
+  Check,
+  Clock3,
+  Download,
+  Flame,
+  Headphones,
+  Languages,
+  Play,
+  Save,
+  Upload,
+} from 'lucide-react'
 import { Link } from 'react-router-dom'
-import { beginnerLessons } from '../data'
 import { plainJapanese } from '../content'
+import { beginnerLessons, lessonKey } from '../data'
+import { downloadProgressBackup, restoreProgressBackup } from '../progressBackup'
 import type { StudyController } from '../study'
 
-export function HomePage({ study }: { study: StudyController }) {
-  const nextLesson = beginnerLessons[study.currentDay.lessonId - 1] || beginnerLessons[0]
+interface Progress {
+  completed: string[]
+}
+
+export function HomePage({ study, progress }: { study: StudyController; progress: Progress }) {
+  const restoreInput = useRef<HTMLInputElement>(null)
+  const [restoreError, setRestoreError] = useState(false)
+  const completedLessons = beginnerLessons.filter((lesson) =>
+    progress.completed.includes(lessonKey('beginner', lesson.id)),
+  )
+  const nextLesson =
+    beginnerLessons.find((lesson) => !progress.completed.includes(lessonKey('beginner', lesson.id)))
+    ?? beginnerLessons.at(-1)
+    ?? beginnerLessons[0]!
+  const hasStarted = completedLessons.length > 0
+  const isComplete = completedLessons.length === beginnerLessons.length
+  const nextLabel = isComplete ? '重新查看最后一课' : hasStarted ? `继续第 ${nextLesson.id} 课` : '开始第一课'
+  const progressPercent = (completedLessons.length / beginnerLessons.length) * 100
+
+  const importBackup = async (file?: File) => {
+    if (!file) return
+    setRestoreError(false)
+    try {
+      await restoreProgressBackup(file)
+    } catch {
+      setRestoreError(true)
+    }
+  }
 
   return (
     <div className="page home-page">
       <section className="hero">
         <div className="hero-copy">
-          <span className="eyebrow">DAY {String(study.currentDay.day).padStart(2, '0')} · 你的今日任务</span>
-          <h1>每天15分钟，<br /><em>真正记住日语。</em></h1>
-          <p>今天只完成一个明确目标：{study.currentDay.focus}。理解、练习、复习，形成完整学习闭环。</p>
+          <span className="eyebrow">YOUR PROGRESS · 初级第 {nextLesson.id} 课</span>
+          <h1>{hasStarted ? '继续上次的学习，' : '从第一课开始，'}<br /><em>直接进入课程。</em></h1>
+          <p>
+            {hasStarted
+              ? `你已经完成 ${completedLessons.length} 课。进度会自动保存在当前浏览器，下次打开仍从这里继续。`
+              : '不需要制定计划，也不用先做设置。学习完成后，进度会自动保存在当前浏览器。'}
+          </p>
           <div className="hero-actions">
             <Link className="button primary" to={`/lesson/beginner/${nextLesson.id}`}>
-              {study.completedDays.length ? '继续学习' : '开始第一课'} <ArrowRight size={17} />
+              {nextLabel} <ArrowRight size={17} />
             </Link>
-            <Link className="button secondary" to="/plan">查看30天计划</Link>
+            <Link className="button secondary" to="/courses">查看全部课程</Link>
           </div>
           <div className="trust-row">
             <span><Flame size={14} /> 连续学习 {study.streak} 天</span>
-            <span><Check size={14} /> 已完成 {study.completedDays.length} 天</span>
+            <span><Check size={14} /> 已完成 {completedLessons.length} / {beginnerLessons.length} 课</span>
             <span><Check size={14} /> {study.dueWords.length} 个词待复习</span>
           </div>
         </div>
+
         <div className="focus-card">
           <div className="focus-card-head">
-            <span>今日学习</span><small>约 15 分钟</small>
+            <span>继续学习</span><small>进度已自动保存</small>
           </div>
-          <div className="lesson-number">DAY {String(study.currentDay.day).padStart(2, '0')} · LESSON {String(nextLesson.id).padStart(2, '0')}</div>
+          <div className="lesson-number">LESSON {String(nextLesson.id).padStart(2, '0')} / {beginnerLessons.length}</div>
           <div className="focus-japanese" dangerouslySetInnerHTML={{ __html: plainJapanese(nextLesson.title) }} />
-          <p>{study.currentDay.focus}</p>
+          <p>从你上次停下的位置继续，学完后标记完成即可。</p>
           <div className="focus-tasks">
-            <span><BookOpen size={16} /> 理解核心句型</span>
-            <span><Headphones size={16} /> 跟读应用课文</span>
+            <span><BookOpen size={16} /> 阅读基本课文</span>
+            <span><Headphones size={16} /> 点击词语听读音</span>
             <span><Languages size={16} /> 复习本课词汇</span>
           </div>
           <Link to={`/lesson/beginner/${nextLesson.id}`} className="focus-play">
-            <Play size={17} fill="currentColor" /> 开始今日学习
+            <Play size={17} fill="currentColor" /> {nextLabel}
           </Link>
-          <div className="progress-meta"><span>30天计划</span><b>{study.completedDays.length} / 30</b></div>
-          <div className="progress-track"><i style={{ width: `${Math.max((study.completedDays.length / 30) * 100, 2)}%` }} /></div>
+          <div className="progress-meta"><span>初级课程进度</span><b>{completedLessons.length} / {beginnerLessons.length}</b></div>
+          <div className="progress-track"><i style={{ width: `${Math.max(progressPercent, 2)}%` }} /></div>
         </div>
       </section>
 
-      <section className="starter-strip">
-        <div><span className="eyebrow">FIRST 15 MINUTES</span><h2>第一次来？今天只做三件事</h2></div>
-        {[
-          ['01', '认识句子', '3 分钟'],
-          ['02', '跟读课文', '7 分钟'],
-          ['03', '记住 5 个词', '5 分钟'],
-        ].map(([number, title, time]) => (
-          <div className="mini-step" key={number}><span>{number}</span><p><b>{title}</b><small>{time}</small></p></div>
-        ))}
-        <Link to="/lesson/beginner/1" aria-label="开始第一课"><ArrowRight /></Link>
+      <section className="starter-strip quick-navigation">
+        <div><span className="eyebrow">QUICK ACCESS</span><h2>快速进入</h2></div>
+        <Link className="mini-step" to={`/lesson/beginner/${nextLesson.id}`}>
+          <span>続</span><p><b>继续课程</b><small>第 {nextLesson.id} 课</small></p>
+        </Link>
+        <Link className="mini-step" to="/courses">
+          <span>課</span><p><b>全部课程</b><small>自由选择</small></p>
+        </Link>
+        <Link className="mini-step" to="/review">
+          <span>復</span><p><b>复习词汇</b><small>{study.dueWords.length} 个待复习</small></p>
+        </Link>
+        <Link to={`/lesson/beginner/${nextLesson.id}`} aria-label={nextLabel}><ArrowRight /></Link>
       </section>
 
       <section className="content-section">
-        <div className="section-title"><div><span className="eyebrow">LEARNING PATH</span><h2>清晰的初学路线</h2></div><Link to="/courses">全部课程 <ArrowRight size={15} /></Link></div>
-        <div className="path-cards">
-          <Link className="path-card coral" to="/lesson/beginner/1">
-            <span className="path-icon">あ</span><small>STEP 01 · 现在开始</small><h3>初级日语</h3>
-            <p>从基础句型、假名与生活会话开始。</p><b>48 课 <ArrowRight size={14} /></b>
+        <div className="section-title">
+          <div><span className="eyebrow">PROGRESS</span><h2>个人学习进度</h2></div>
+          <Link to="/courses">查看课程导航 <ArrowRight size={15} /></Link>
+        </div>
+        <div className="progress-save">
+          <div className="progress-save-copy">
+            <span className="progress-save-icon"><Save size={20} /></span>
+            <div>
+              <strong>已自动保存到当前浏览器</strong>
+              <p>同一台设备再次打开会自动恢复。更换设备或清理浏览器前，请下载一份进度备份。</p>
+              {restoreError && <small role="alert">无法读取这个备份文件，请选择本站导出的 JSON 文件。</small>}
+            </div>
+          </div>
+          <div className="progress-save-actions">
+            <button className="button secondary" type="button" onClick={downloadProgressBackup}>
+              <Download size={15} /> 备份进度
+            </button>
+            <button className="button secondary" type="button" onClick={() => restoreInput.current?.click()}>
+              <Upload size={15} /> 恢复进度
+            </button>
+            <input
+              ref={restoreInput}
+              type="file"
+              accept="application/json,.json"
+              hidden
+              onChange={(event) => void importBackup(event.target.files?.[0])}
+            />
+          </div>
+        </div>
+
+        <div className="path-cards progress-path-cards">
+          <Link className="path-card coral" to={`/lesson/beginner/${nextLesson.id}`}>
+            <span className="path-icon">続</span><small>当前进度</small><h3>第 {nextLesson.id} 课</h3>
+            <p>{isComplete ? '初级课程已全部完成，可以随时回看。' : `已完成 ${completedLessons.length} 课，继续学习下一课。`}</p>
+            <b>{nextLabel} <ArrowRight size={14} /></b>
           </Link>
-          <Link className="path-card indigo" to="/courses#intermediate">
-            <span className="path-icon">話</span><small>STEP 02 · 完成初级后</small><h3>中级进阶</h3>
-            <p>提升阅读表达，理解自然的日语语境。</p><b>32 课 <ArrowRight size={14} /></b>
+          <Link className="path-card indigo" to="/courses">
+            <span className="path-icon">課</span><small>课程导航</small><h3>全部课程</h3>
+            <p>按初级和中级浏览全部内容，随时跳转到任意课程。</p>
+            <b>打开课程库 <ArrowRight size={14} /></b>
           </Link>
           <Link className="path-card mint" to="/review">
-            <span className="path-icon"><Clock3 size={22} /></span><small>DAILY · 每天复习</small><h3>短时学习</h3>
-            <p>根据记忆情况安排到期词汇，避免无效重复。</p><b>开始复习 <ArrowRight size={14} /></b>
+            <span className="path-icon"><Clock3 size={22} /></span><small>词汇复习</small><h3>智能复习</h3>
+            <p>只复习已经学过和当前需要记忆的词汇。</p>
+            <b>开始复习 <ArrowRight size={14} /></b>
           </Link>
         </div>
       </section>

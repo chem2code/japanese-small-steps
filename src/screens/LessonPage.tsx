@@ -134,10 +134,16 @@ export function LessonPage({ progress, study }: { progress: Progress; study: Stu
     window.setTimeout(() => setExported(false), 2_500)
   }
 
+  const toggleLessonCompletion = () => {
+    progress.toggle(key)
+    if (level === 'beginner') {
+      const savedInStudy = study.completedDays.includes(id)
+      if ((completed && savedInStudy) || (!completed && !savedInStudy)) study.toggleLesson(id)
+    }
+  }
+
   const completeLesson = () => {
-    if (!completed) progress.toggle(key)
-    const planDay = Math.min(id, 30)
-    if (!study.completedDays.includes(planDay)) study.toggleDay(planDay)
+    if (!completed) toggleLessonCompletion()
   }
 
   return (
@@ -145,7 +151,7 @@ export function LessonPage({ progress, study }: { progress: Progress; study: Stu
       <header className="lesson-topbar">
         <Link to="/courses"><ArrowLeft size={17} />课程地图</Link>
         <div className="lesson-progress"><span>{level === 'beginner' ? '初级' : '中级'} · 第 {id} 课</span><i><b style={{ width: `${(id / lessons.length) * 100}%` }} /></i><small>{id}/{lessons.length}</small></div>
-        <button className={completed ? 'completed' : ''} onClick={() => progress.toggle(key)}>
+        <button className={completed ? 'completed' : ''} onClick={toggleLessonCompletion}>
           {completed ? <CheckCircle2 size={17} /> : <Check size={17} />}{completed ? '已完成' : '标记完成'}
         </button>
       </header>
