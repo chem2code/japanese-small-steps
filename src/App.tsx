@@ -4,7 +4,6 @@ import {
   BookOpen,
   Brain,
   ChevronRight,
-  Dumbbell,
   Home,
   Menu,
   Sparkles,
@@ -17,11 +16,9 @@ import { HomePage } from './screens/HomePage'
 import { CoursesPage } from './screens/CoursesPage'
 import { LessonPage } from './screens/LessonPage'
 import { ReviewPage } from './screens/ReviewPage'
-import { PracticePage } from './screens/PracticePage'
 
 const nav = [
   { to: '/', label: '学习首页', icon: Home, end: true },
-  { to: '/practice', label: '即时练习', icon: Dumbbell },
   { to: '/review', label: '智能复习', icon: Brain },
   { to: '/courses', label: '课程资料库', icon: BookOpen },
 ]
@@ -73,7 +70,7 @@ export default function App() {
           <Routes>
             <Route path="/" element={<HomePage study={study} progress={progress} />} />
             <Route path="/plan" element={<Navigate to="/" replace />} />
-            <Route path="/practice" element={<PracticePage study={study} />} />
+            <Route path="/practice" element={<Navigate to="/" replace />} />
             <Route path="/review" element={<ReviewPage study={study} />} />
             <Route path="/courses" element={<CoursesPage progress={progress} />} />
             <Route path="/lesson/:level/:id" element={<LessonPage progress={progress} study={study} />} />
