@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { ArrowLeft, ArrowRight, Check, CheckCircle2, Download, Eye, EyeOff, Layers3, Volume2 } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Check, CheckCircle2, ChevronDown, Download, ExternalLink, Eye, EyeOff, Layers3, PlayCircle, Volume2 } from 'lucide-react'
 import {
   beginnerLessons,
   intermediateLessons,
@@ -12,6 +12,7 @@ import { japaneseMarkup, plainJapanese, renderContent } from '../content'
 import { exportLessonToAnki } from '../anki'
 import { assetUrl } from '../assetUrl'
 import { getLessonMedia } from '../lessonMedia'
+import { bilibiliPlayerUrl, bilibiliVideoUrl, videosForLesson } from '../lessonVideos'
 import { FlashcardStudy } from '../components/FlashcardStudy'
 import type { StudyController } from '../study'
 
@@ -70,10 +71,13 @@ export function LessonPage({ progress, study }: { progress: Progress; study: Stu
   const [activeWord, setActiveWord] = useState<number | null>(null)
   const [studyOpen, setStudyOpen] = useState(false)
   const [exported, setExported] = useState(false)
+  const [activeVideo, setActiveVideo] = useState<string | null>(null)
+  const lessonVideos = useMemo(() => videosForLesson(level, id), [id, level])
 
   useEffect(() => {
     wordItemAudioRef.current?.pause()
     setActiveWord(null)
+    setActiveVideo(null)
   }, [id, level])
 
   if (!lesson) return <div className="page empty-state">没有找到这节课程。<Link to="/courses">返回课程地图</Link></div>
@@ -124,6 +128,13 @@ export function LessonPage({ progress, study }: { progress: Progress; study: Stu
     audio.playbackRate = 1
     setActiveWord(index)
     void audio.play().catch(() => setActiveWord(null))
+  }
+
+  const toggleVideo = (videoKey: string) => {
+    lessonAudioRef.current?.pause()
+    wordAudioRef.current?.pause()
+    stopWordAudio()
+    setActiveVideo((current) => current === videoKey ? null : videoKey)
   }
 
   const exportAnki = () => {
@@ -183,6 +194,53 @@ export function LessonPage({ progress, study }: { progress: Progress; study: Stu
               label="课文录音"
               helper="建议先听一遍，再用 0.8× 逐句跟读"
             />
+            {lessonVideos.length > 0 && (
+              <section className="lesson-videos" aria-labelledby="lesson-video-heading">
+                <div className="lesson-videos-heading">
+                  <div>
+                    <span>VIDEO LESSON</span>
+                    <h2 id="lesson-video-heading">配套视频讲解</h2>
+                    <p>视频不会自动加载，确定观看后再点击展开。</p>
+                  </div>
+                  <small>来源：教日语的阿飞老师 · 哔哩哔哩</small>
+                </div>
+                <div className="lesson-video-options">
+                  {lessonVideos.map((video) => (
+                    <button
+                      type="button"
+                      className={activeVideo === video.key ? 'active' : ''}
+                      key={video.key}
+                      aria-expanded={activeVideo === video.key}
+                      onClick={() => toggleVideo(video.key)}
+                    >
+                      <PlayCircle size={20} />
+                      <span><strong>{video.label}</strong><small>{video.duration}</small></span>
+                      <ChevronDown size={16} />
+                    </button>
+                  ))}
+                </div>
+                {lessonVideos.map((video) => activeVideo === video.key && (
+                  <div className="lesson-video-player" key={video.key}>
+                    <div className="lesson-video-frame">
+                      <iframe
+                        src={bilibiliPlayerUrl(video)}
+                        title={video.title}
+                        loading="lazy"
+                        allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
+                        allowFullScreen
+                        referrerPolicy="strict-origin-when-cross-origin"
+                      />
+                    </div>
+                    <div className="lesson-video-meta">
+                      <span>{video.title}</span>
+                      <a href={bilibiliVideoUrl(video)} target="_blank" rel="noreferrer">
+                        在哔哩哔哩打开 <ExternalLink size={13} />
+                      </a>
+                    </div>
+                  </div>
+                ))}
+              </section>
+            )}
           </section>
 
           <section id="text" className="lesson-section">
