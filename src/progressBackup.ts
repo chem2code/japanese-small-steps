@@ -29,7 +29,7 @@ export function downloadProgressBackup() {
   link.href = url
   link.download = `japanese-small-steps-progress-${new Date().toISOString().slice(0, 10)}.json`
   link.click()
-  URL.revokeObjectURL(url)
+  window.setTimeout(() => URL.revokeObjectURL(url), 1_000)
 }
 
 export async function restoreProgressBackup(file: File) {
