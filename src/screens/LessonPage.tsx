@@ -155,6 +155,10 @@ export function LessonPage({ progress, study }: { progress: Progress; study: Stu
     if (!completed) toggleLessonCompletion()
   }
 
+  const scrollToSection = (sectionId: string) => {
+    document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+
   return (
     <div className={`lesson-page ${showRuby ? '' : 'hide-ruby'}`}>
       <header className="lesson-topbar">
@@ -167,9 +171,10 @@ export function LessonPage({ progress, study }: { progress: Progress; study: Stu
       <div className="lesson-layout">
         <aside className="lesson-outline">
           <span>本课内容</span>
-          <a href="#overview">课程概览</a><a href="#text">基本课文</a>
-          {lessonGrammar.length > 0 && <a href="#grammar">语法要点</a>}
-          {lessonWords.length > 0 && <a href="#words">生词表</a>}
+          <button type="button" onClick={() => scrollToSection('overview')}>课程概览</button>
+          <button type="button" onClick={() => scrollToSection('text')}>基本课文</button>
+          {lessonGrammar.length > 0 && <button type="button" onClick={() => scrollToSection('grammar')}>语法要点</button>}
+          {lessonWords.length > 0 && <button type="button" onClick={() => scrollToSection('words')}>生词表</button>}
         </aside>
         <article className="lesson-article">
           <section id="overview" className="lesson-intro">
