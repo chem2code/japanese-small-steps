@@ -12,7 +12,7 @@ function LevelSection({ level, lessons, progress }: { level: Level; lessons: Les
     <section id={level} className="course-level">
       <div className="level-heading">
         <span className={`level-mark ${isBeginner ? 'coral-bg' : 'indigo-bg'}`}>{isBeginner ? '初' : '中'}</span>
-        <div><h2>{isBeginner ? '初级课程' : '中级课程'}</h2><p>{isBeginner ? '从基础句型到日常会话' : '提升阅读、会话与表达'}</p></div>
+        <div><h2>{isBeginner ? '新标日初级' : '新标日中级'}</h2><p>{isBeginner ? '从零基础建立日语核心框架' : '提升阅读、会话与综合表达，衔接 N2'}</p></div>
         {isBeginner && <b className="recommend">建议从这里开始</b>}
       </div>
       <div className="unit-grid">
@@ -50,13 +50,13 @@ export function CoursesPage({ progress }: { progress: Progress }) {
   return (
     <div className="page courses-page">
       <header className="course-hero">
-        <span className="eyebrow">COURSE MAP</span>
-        <h1>你的日语学习路线</h1>
-        <p>从初级第 1 单元开始，每个单元包含 4 课。初学阶段不求一次学完，稳定地完成每个小目标更重要。</p>
+        <span className="eyebrow">NEW STANDARD JAPANESE · 80 LESSONS</span>
+        <h1>新标准日本语完整学习路线</h1>
+        <p>覆盖初级 48 课与中级 32 课。每 4 课组成一个单元，从零基础逐步建立词汇、语法、听读和会话能力，完成后可系统衔接 JLPT N2 学习与备考。</p>
         <div className="course-facts">
-          <span><Clock3 size={15} /><b>每日</b> 15–25 分钟</span>
-          <span><b>建议</b> 每周 2 课</span>
-          <span><b>完整内容</b> 80 课</span>
+          <span><Clock3 size={15} /><b>初级</b> 48 课</span>
+          <span><b>中级</b> 32 课</span>
+          <span><b>学习目标</b> 系统衔接 JLPT N2</span>
         </div>
       </header>
       <nav className="level-tabs"><a href="#beginner">初级课程 <small>48 课</small></a><a href="#intermediate">中级课程 <small>32 课</small></a></nav>

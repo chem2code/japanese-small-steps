@@ -14,7 +14,7 @@ import {
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { plainJapanese } from '../content'
-import { beginnerLessons, lessonKey } from '../data'
+import { beginnerLessons, intermediateLessons, lessonKey } from '../data'
 import { downloadProgressBackup, restoreProgressBackup } from '../progressBackup'
 import type { StudyController } from '../study'
 
@@ -51,12 +51,12 @@ export function HomePage({ study, progress }: { study: StudyController; progress
     <div className="page home-page">
       <section className="hero">
         <div className="hero-copy">
-          <span className="eyebrow">YOUR PROGRESS · 初级第 {nextLesson.id} 课</span>
-          <h1>{hasStarted ? '继续上次的学习，' : '从第一课开始，'}<br /><em>直接进入课程。</em></h1>
+          <span className="eyebrow">新标准日本语 · 初级 + 中级 · 共 {beginnerLessons.length + intermediateLessons.length} 课</span>
+          <h1>{hasStarted ? '继续你的新标日学习，' : '从零基础开始，'}<br /><em>系统衔接 JLPT N2。</em></h1>
           <p>
             {hasStarted
-              ? `你已经完成 ${completedLessons.length} 课。进度会自动保存在当前浏览器，下次打开仍从这里继续。`
-              : '不需要制定计划，也不用先做设置。学习完成后，进度会自动保存在当前浏览器。'}
+              ? `你已经完成初级 ${completedLessons.length} 课。课程完整覆盖《新标准日本语》初级与中级，进度会自动保存，下次打开继续学习。`
+              : '完整学习《新标准日本语》初级 48 课与中级 32 课，循序建立词汇、语法、听读与会话基础，为 JLPT N2 学习和备考打好框架。'}
           </p>
           <div className="hero-actions">
             <Link className="button primary" to={`/lesson/beginner/${nextLesson.id}`}>
@@ -65,9 +65,9 @@ export function HomePage({ study, progress }: { study: StudyController; progress
             <Link className="button secondary" to="/courses">查看全部课程</Link>
           </div>
           <div className="trust-row">
-            <span><Flame size={14} /> 连续学习 {study.streak} 天</span>
-            <span><Check size={14} /> 已完成 {completedLessons.length} / {beginnerLessons.length} 课</span>
-            <span><Check size={14} /> {study.dueWords.length} 个词待复习</span>
+            <span><BookOpen size={14} /> 新标日初级 + 中级</span>
+            <span><Check size={14} /> {beginnerLessons.length + intermediateLessons.length} 课完整内容</span>
+            <span><Flame size={14} /> 学完系统衔接 N2</span>
           </div>
         </div>
 
@@ -102,7 +102,7 @@ export function HomePage({ study, progress }: { study: StudyController; progress
         <Link className="mini-step" to="/review">
           <span>復</span><p><b>复习词汇</b><small>{study.dueWords.length} 个待复习</small></p>
         </Link>
-        <Link to={`/lesson/beginner/${nextLesson.id}`} aria-label={nextLabel}><ArrowRight /></Link>
+        <Link className="starter-arrow" to={`/lesson/beginner/${nextLesson.id}`} aria-label={nextLabel}><ArrowRight /></Link>
       </section>
 
       <section className="content-section">

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type RefObject } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, ArrowRight, Check, CheckCircle2, ChevronDown, Clapperboard, Download, ExternalLink, Eye, EyeOff, Layers3, PlayCircle, Volume2 } from 'lucide-react'
 import {
   beginnerLessons,
@@ -52,10 +52,14 @@ function LessonAudio({ src, label, helper, audioRef: providedRef, onPlay }: { sr
 
 export function LessonPage({ progress, study }: { progress: Progress; study: StudyController }) {
   const params = useParams()
+  const navigate = useNavigate()
   const level = (params.level === 'intermediate' ? 'intermediate' : 'beginner') as Level
   const id = Number(params.id || 1)
   const lessons = level === 'beginner' ? beginnerLessons : intermediateLessons
   const lesson = lessons.find((item) => item.id === id)
+  const currentUnit = Math.ceil(id / 4)
+  const unitCount = Math.ceil(lessons.length / 4)
+  const unitLessons = lessons.filter((item) => Math.ceil(item.id / 4) === currentUnit)
   const [showTranslation, setShowTranslation] = useState(false)
   const [showRuby, setShowRuby] = useState(true)
 
@@ -180,11 +184,45 @@ export function LessonPage({ progress, study }: { progress: Progress; study: Stu
     document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 
+  const changeLevel = (nextLevel: Level) => {
+    const nextLessons = nextLevel === 'beginner' ? beginnerLessons : intermediateLessons
+    navigate(`/lesson/${nextLevel}/${Math.min(id, nextLessons.length)}`)
+  }
+
+  const changeUnit = (unit: number) => {
+    navigate(`/lesson/${level}/${((unit - 1) * 4) + 1}`)
+  }
+
   return (
     <div className={`lesson-page ${showRuby ? '' : 'hide-ruby'}`}>
       <header className="lesson-topbar">
-        <Link to="/courses"><ArrowLeft size={17} />课程地图</Link>
-        <div className="lesson-progress"><span>{level === 'beginner' ? '初级' : '中级'} · 第 {id} 课</span><i><b style={{ width: `${(id / lessons.length) * 100}%` }} /></i><small>{id}/{lessons.length}</small></div>
+        <Link className="lesson-map-link" to="/courses"><ArrowLeft size={17} /><span>课程地图</span></Link>
+        <div className="lesson-course-switcher" aria-label="快速切换课程">
+          <label>
+            <span>级别</span>
+            <select aria-label="课程级别" value={level} onChange={(event) => changeLevel(event.target.value as Level)}>
+              <option value="beginner">初级 · 48 课</option>
+              <option value="intermediate">中级 · 32 课</option>
+            </select>
+          </label>
+          <label>
+            <span>单元</span>
+            <select aria-label="课程单元" value={currentUnit} onChange={(event) => changeUnit(Number(event.target.value))}>
+              {Array.from({ length: unitCount }, (_, index) => index + 1).map((unit) => (
+                <option key={unit} value={unit}>第 {unit} 单元 · {((unit - 1) * 4) + 1}–{Math.min(unit * 4, lessons.length)} 课</option>
+              ))}
+            </select>
+          </label>
+          <label className="lesson-select">
+            <span>课程</span>
+            <select aria-label="当前课程" value={id} onChange={(event) => navigate(`/lesson/${level}/${event.target.value}`)}>
+              {unitLessons.map((item) => (
+                <option key={item.id} value={item.id}>第 {item.id} 课 · {plainJapanese(item.title)}</option>
+              ))}
+            </select>
+          </label>
+          <small>{id}/{lessons.length}</small>
+        </div>
         <button className={completed ? 'completed' : ''} onClick={toggleLessonCompletion}>
           {completed ? <CheckCircle2 size={17} /> : <Check size={17} />}{completed ? '已完成' : '标记完成'}
         </button>
