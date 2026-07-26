@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { ArrowLeft, ArrowRight, Check, CheckCircle2, ChevronDown, Download, ExternalLink, Eye, EyeOff, Layers3, PlayCircle, Volume2 } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Check, CheckCircle2, ChevronDown, Clapperboard, Download, ExternalLink, Eye, EyeOff, Layers3, PlayCircle, Volume2 } from 'lucide-react'
 import {
   beginnerLessons,
   intermediateLessons,
@@ -68,16 +68,19 @@ export function LessonPage({ progress, study }: { progress: Progress; study: Stu
   const lessonAudioRef = useRef<HTMLAudioElement>(null)
   const wordAudioRef = useRef<HTMLAudioElement>(null)
   const wordItemAudioRef = useRef<HTMLAudioElement>(null)
+  const sceneVideoRef = useRef<HTMLVideoElement>(null)
   const [activeWord, setActiveWord] = useState<number | null>(null)
   const [studyOpen, setStudyOpen] = useState(false)
   const [exported, setExported] = useState(false)
   const [activeVideo, setActiveVideo] = useState<string | null>(null)
+  const [sceneVideoOpen, setSceneVideoOpen] = useState(false)
   const lessonVideos = useMemo(() => videosForLesson(level, id), [id, level])
 
   useEffect(() => {
     wordItemAudioRef.current?.pause()
     setActiveWord(null)
     setActiveVideo(null)
+    setSceneVideoOpen(false)
   }, [id, level])
 
   if (!lesson) return <div className="page empty-state">没有找到这节课程。<Link to="/courses">返回课程地图</Link></div>
@@ -133,8 +136,26 @@ export function LessonPage({ progress, study }: { progress: Progress; study: Stu
   const toggleVideo = (videoKey: string) => {
     lessonAudioRef.current?.pause()
     wordAudioRef.current?.pause()
+    sceneVideoRef.current?.pause()
     stopWordAudio()
+    setSceneVideoOpen(false)
     setActiveVideo((current) => current === videoKey ? null : videoKey)
+  }
+
+  const toggleSceneVideo = () => {
+    lessonAudioRef.current?.pause()
+    wordAudioRef.current?.pause()
+    stopWordAudio()
+    setActiveVideo(null)
+    if (sceneVideoOpen) sceneVideoRef.current?.pause()
+    setSceneVideoOpen((current) => !current)
+  }
+
+  const handleSceneVideoPlay = () => {
+    lessonAudioRef.current?.pause()
+    wordAudioRef.current?.pause()
+    stopWordAudio()
+    setActiveVideo(null)
   }
 
   const exportAnki = () => {
@@ -250,6 +271,50 @@ export function LessonPage({ progress, study }: { progress: Progress; study: Stu
 
           <section id="text" className="lesson-section">
             <div className="lesson-section-title"><span>01</span><div><h2>{level === 'beginner' ? '基本课文' : lesson.sceneTitle}</h2><p>先完整阅读，再逐句跟读</p></div></div>
+            {level === 'beginner' && (
+              <section className={`scene-video-card ${sceneVideoOpen ? 'is-open' : ''}`} aria-label="课文情景视频">
+                <button
+                  type="button"
+                  className="scene-video-trigger"
+                  aria-expanded={sceneVideoOpen}
+                  onClick={toggleSceneVideo}
+                >
+                  <span className="scene-video-icon"><Clapperboard size={19} /></span>
+                  <span>
+                    <small>VERTICAL STORY VIDEO · 第 {id} 课</small>
+                    <strong>{plainJapanese(lesson.sceneTitle)} · 课文情景视频</strong>
+                    <em>点击后加载竖屏视频，结合场景理解课文</em>
+                  </span>
+                  <ChevronDown size={18} />
+                </button>
+                {sceneVideoOpen && (
+                  <div className="scene-video-content">
+                    <div className="scene-video-phone">
+                      <video
+                        ref={sceneVideoRef}
+                        controls
+                        playsInline
+                        preload="metadata"
+                        src={assetUrl(`/assets/lesson-videos/l${id}.mp4`)}
+                        onPlay={handleSceneVideoPlay}
+                      >
+                        你的浏览器不支持视频播放。
+                      </video>
+                    </div>
+                    <div className="scene-video-guide">
+                      <span className="eyebrow">SCENE FIRST</span>
+                      <h3>先看场景，再读课文</h3>
+                      <p>这段竖屏视频对应本课应用课文“{plainJapanese(lesson.sceneTitle)}”。建议先完整看一遍，再回到下方原文跟读。</p>
+                      <ol>
+                        <li><b>第一遍</b><span>只看情景和人物关系</span></li>
+                        <li><b>第二遍</b><span>留意本课句型如何使用</span></li>
+                        <li><b>最后</b><span>回到原文，尝试逐句跟读</span></li>
+                      </ol>
+                    </div>
+                  </div>
+                )}
+              </section>
+            )}
             <ContentBlock source={lesson.basic} />
             {lesson.conversation && <ContentBlock source={lesson.conversation} />}
             {showTranslation && (lesson.translation || lesson.conversationTranslation) && (
