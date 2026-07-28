@@ -1,4 +1,4 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import '../src/styles.css'
 import '../src/apple-mobile.css'
 
@@ -34,6 +34,13 @@ export const metadata: Metadata = {
     description: '打开即继续学习，免费使用课程、读音、复习与进度记录。',
     images: ['/og.png'],
   },
+}
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
+  themeColor: '#fff4f1',
 }
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
