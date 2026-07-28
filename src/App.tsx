@@ -1,13 +1,10 @@
-import { useState } from 'react'
-import { Link, NavLink, Navigate, Route, Routes } from 'react-router-dom'
+import { Link, NavLink, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import {
   BookOpen,
   Brain,
   ChevronRight,
   Home,
-  Menu,
   Sparkles,
-  X,
 } from 'lucide-react'
 import { useProgress } from './useProgress'
 import { useStudy } from './study'
@@ -24,7 +21,7 @@ const nav = [
 ]
 
 export default function App() {
-  const [menuOpen, setMenuOpen] = useState(false)
+  const location = useLocation()
   const progress = useProgress()
   const study = useStudy()
   const completedBeginner = beginnerLessons.filter((lesson) =>
@@ -38,15 +35,15 @@ export default function App() {
   return (
     <div className="app-shell">
       <a className="skip-link" href="#main">跳到正文</a>
-      <aside className={`sidebar ${menuOpen ? 'is-open' : ''}`}>
-        <Link className="brand" to="/" onClick={() => setMenuOpen(false)}>
+      <aside className="sidebar">
+        <Link className="brand" to="/">
           <span className="brand-mark">歩</span>
           <span><strong>日语小步</strong><small>每天一小步，日语更进一步。</small></span>
         </Link>
         <nav className="sidebar-nav">
           <span className="nav-heading">学习</span>
           {nav.map(({ to, label, icon: Icon, end }) => (
-            <NavLink key={to} to={to} end={end} onClick={() => setMenuOpen(false)}>
+            <NavLink key={to} to={to} end={end}>
               <Icon size={18} /><span>{label}</span><ChevronRight className="nav-arrow" size={14} />
             </NavLink>
           ))}
@@ -58,13 +55,12 @@ export default function App() {
           <small>已完成 {completedBeginner} / {beginnerLessons.length} 课</small>
         </div>
       </aside>
-      {menuOpen && <button className="menu-overlay" aria-label="关闭菜单" onClick={() => setMenuOpen(false)} />}
       <div className="app-main">
         <header className="mobile-header">
-          <Link to="/" className="mobile-brand">日语<span>小步</span></Link>
-          <button className="icon-button" onClick={() => setMenuOpen((value) => !value)} aria-label="打开菜单">
-            {menuOpen ? <X /> : <Menu />}
-          </button>
+          <Link to="/" className="mobile-brand"><span className="mobile-brand-mark">歩</span><strong>日语小步</strong></Link>
+          <Link className="mobile-progress-pill" to={`/lesson/beginner/${nextLesson.id}`}>
+            <span>继续学习</span><b>第 {nextLesson.id} 课</b>
+          </Link>
         </header>
         <main id="main">
           <Routes>
@@ -78,6 +74,21 @@ export default function App() {
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </main>
+        <nav className="mobile-tabbar" aria-label="主要导航">
+          {nav.map(({ to, label, icon: Icon, end }) => (
+            <NavLink
+              key={to}
+              to={to}
+              end={end}
+              className={({ isActive }) =>
+                isActive || (to === '/courses' && location.pathname.startsWith('/lesson')) ? 'active' : ''
+              }
+            >
+              <Icon size={22} strokeWidth={2.1} />
+              <span>{label === '学习首页' ? '学习' : label === '课程资料库' ? '课程' : '复习'}</span>
+            </NavLink>
+          ))}
+        </nav>
       </div>
     </div>
   )

@@ -197,6 +197,10 @@ export function LessonPage({ progress, study }: { progress: Progress; study: Stu
     <div className={`lesson-page ${showRuby ? '' : 'hide-ruby'}`}>
       <header className="lesson-topbar">
         <Link className="lesson-map-link" to="/courses"><ArrowLeft size={17} /><span>课程地图</span></Link>
+        <div className="lesson-mobile-title">
+          <small>{level === 'beginner' ? '初级' : '中级'}</small>
+          <strong>第 {id} 课</strong>
+        </div>
         <div className="lesson-course-switcher" aria-label="快速切换课程">
           <label>
             <span>级别</span>
