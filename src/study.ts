@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { beginnerLessons } from './data'
-import { wordsForLesson, type Word } from './lessonDetails'
+import { allWords, wordsForLesson, type Word } from './lessonDetails'
 
 const STUDY_KEY = 'hyoga-study-v3'
 
@@ -17,12 +17,14 @@ interface StudyState {
   completedDays: number[]
   review: Record<string, ReviewState>
   activityDates: string[]
+  bookmarkedWordIds: string[]
 }
 
 const initialState: StudyState = {
   completedDays: [],
   review: {},
   activityDates: [],
+  bookmarkedWordIds: [],
 }
 
 export const wordId = (word: Word) =>
@@ -39,6 +41,7 @@ function readState(): StudyState {
       completedDays: parsed.completedDays || [],
       review: parsed.review || {},
       activityDates: parsed.activityDates || [],
+      bookmarkedWordIds: parsed.bookmarkedWordIds || [],
     }
   } catch {
     return initialState
@@ -102,6 +105,16 @@ export function useStudy() {
     })
   }, [])
 
+  const toggleBookmark = useCallback((word: Word) => {
+    setState((current) => {
+      const id = wordId(word)
+      const bookmarkedWordIds = current.bookmarkedWordIds.includes(id)
+        ? current.bookmarkedWordIds.filter((item) => item !== id)
+        : [id, ...current.bookmarkedWordIds]
+      return { ...current, bookmarkedWordIds }
+    })
+  }, [])
+
   const currentLessonId =
     beginnerLessons.find((lesson) => !state.completedDays.includes(lesson.id))?.id
     ?? beginnerLessons.at(-1)?.id
@@ -121,6 +134,10 @@ export function useStudy() {
     })
     return due.length ? due : currentWords.slice(0, 8)
   }, [currentWords, learnedWords, state.review])
+  const bookmarkedWords = useMemo(() => {
+    const byId = new Map(allWords.map((word) => [wordId(word), word]))
+    return state.bookmarkedWordIds.map((id) => byId.get(id)).filter((word): word is Word => Boolean(word))
+  }, [state.bookmarkedWordIds])
 
   const streak = useMemo(() => {
     const activity = new Set(state.activityDates)
@@ -141,6 +158,9 @@ export function useStudy() {
     streak,
     toggleLesson,
     gradeWord,
+    toggleBookmark,
+    bookmarkedWords,
+    isBookmarked: (word: Word) => state.bookmarkedWordIds.includes(wordId(word)),
     lessonCompleted: state.completedDays.includes(currentLessonId),
   }
 }

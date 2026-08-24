@@ -115,7 +115,7 @@ export function HomePage({ study, progress }: { study: StudyController; progress
             <span className="progress-save-icon"><Save size={20} /></span>
             <div>
               <strong>已自动保存到当前浏览器</strong>
-              <p>同一台设备再次打开会自动恢复。更换设备或清理浏览器前，请下载一份进度备份。</p>
+              <p>课程进度和重点单词都会保存。同一台设备会自动恢复；更换设备前请下载备份并在另一台设备恢复。</p>
               {restoreError && <small role="alert">无法读取这个备份文件，请选择本站导出的 JSON 文件。</small>}
             </div>
           </div>

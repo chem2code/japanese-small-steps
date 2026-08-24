@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, ArrowRight, Check, CheckCircle2, ChevronDown, Clapperboard, Download, ExternalLink, Eye, EyeOff, Layers3, PlayCircle, Volume2 } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Bookmark, Check, CheckCircle2, ChevronDown, Clapperboard, Download, ExternalLink, Eye, EyeOff, Layers3, PlayCircle, Volume2 } from 'lucide-react'
 import {
   beginnerLessons,
   intermediateLessons,
@@ -389,7 +389,7 @@ export function LessonPage({ progress, study }: { progress: Progress; study: Stu
               onEnded={() => setActiveWord(null)}
               onError={() => setActiveWord(null)}
             />
-            <div className="word-grid">{lessonWords.map((word, index) => <button className={`word-card ${activeWord === index ? 'is-speaking' : ''}`} key={`${word.lesson}-${index}`} onClick={() => playWordAudio(index)}><span dangerouslySetInnerHTML={{ __html: japaneseMarkup(word.word || word.kanji) }} /><small>{word.kana.replace(/@\d*/g, '')}</small><b>{word.desc}</b><Volume2 size={14} /></button>)}</div>
+            <div className="word-grid">{lessonWords.map((word, index) => <article className={`word-card ${activeWord === index ? 'is-speaking' : ''}`} key={`${word.lesson}-${index}`}><button className="word-card-audio" type="button" onClick={() => playWordAudio(index)}><span dangerouslySetInnerHTML={{ __html: japaneseMarkup(word.word || word.kanji) }} /><small>{word.kana.replace(/@\d*/g, '')}</small><b>{word.desc}</b><Volume2 size={14} /></button><button type="button" className={`word-bookmark ${study.isBookmarked(word) ? 'active' : ''}`} onClick={() => study.toggleBookmark(word)} aria-label={study.isBookmarked(word) ? '取消重点标记' : '标记为重点单词'} title={study.isBookmarked(word) ? '取消重点标记' : '标记为重点单词'}><Bookmark size={15} fill={study.isBookmarked(word) ? 'currentColor' : 'none'} /></button></article>)}</div>
           </section>}
 
           <div className="lesson-finish">
@@ -402,7 +402,7 @@ export function LessonPage({ progress, study }: { progress: Progress; study: Stu
           </nav>
         </article>
       </div>
-      {studyOpen && <FlashcardStudy words={lessonWords} title={`第 ${id} 课`} onClose={() => setStudyOpen(false)} />}
+      {studyOpen && <FlashcardStudy words={lessonWords} title={`第 ${id} 课`} study={study} onClose={() => setStudyOpen(false)} />}
     </div>
   )
 }

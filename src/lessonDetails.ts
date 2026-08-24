@@ -24,6 +24,8 @@ const words = Papa.parse<Word>(wordsSource, {
   transform: (value) => value.trim(),
 }).data
 
+export const allWords = words
+
 const grammar = Papa.parse<Grammar>(grammarSource, {
   header: true,
   skipEmptyLines: true,

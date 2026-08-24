@@ -1,6 +1,7 @@
 import { Link, NavLink, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import {
   BookOpen,
+  Bookmark,
   Brain,
   ChevronRight,
   Home,
@@ -13,10 +14,12 @@ import { HomePage } from './screens/HomePage'
 import { CoursesPage } from './screens/CoursesPage'
 import { LessonPage } from './screens/LessonPage'
 import { ReviewPage } from './screens/ReviewPage'
+import { BookmarksPage } from './screens/BookmarksPage'
 
 const nav = [
   { to: '/', label: '学习首页', icon: Home, end: true },
   { to: '/review', label: '智能复习', icon: Brain },
+  { to: '/bookmarks', label: '重点单词', icon: Bookmark },
   { to: '/courses', label: '课程资料库', icon: BookOpen },
 ]
 
@@ -68,6 +71,7 @@ export default function App() {
             <Route path="/plan" element={<Navigate to="/" replace />} />
             <Route path="/practice" element={<Navigate to="/" replace />} />
             <Route path="/review" element={<ReviewPage study={study} />} />
+            <Route path="/bookmarks" element={<BookmarksPage study={study} />} />
             <Route path="/courses" element={<CoursesPage progress={progress} />} />
             <Route path="/lesson/:level/:id" element={<LessonPage progress={progress} study={study} />} />
             <Route path="/library" element={<Navigate to="/courses" replace />} />
@@ -85,7 +89,7 @@ export default function App() {
               }
             >
               <Icon size={22} strokeWidth={2.1} />
-              <span>{label === '学习首页' ? '学习' : label === '课程资料库' ? '课程' : '复习'}</span>
+              <span>{label === '学习首页' ? '学习' : label === '课程资料库' ? '课程' : label === '重点单词' ? '重点' : '复习'}</span>
             </NavLink>
           ))}
         </nav>

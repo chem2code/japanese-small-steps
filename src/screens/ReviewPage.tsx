@@ -1,7 +1,9 @@
 import { useMemo, useState } from 'react'
-import { Brain, CheckCircle2, RotateCcw, Volume2, X } from 'lucide-react'
+import { Bookmark, Brain, CheckCircle2, RotateCcw, Volume2, X } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import { japaneseMarkup } from '../content'
 import { type ReviewGrade, type StudyController } from '../study'
+import { exampleForWord } from '../wordExamples'
 
 const labels: Record<ReviewGrade, { title: string; hint: string }> = {
   again: { title: '忘了', hint: '10分钟后' },
@@ -17,6 +19,7 @@ export function ReviewPage({ study }: { study: StudyController }) {
   const queue = study.dueWords
   const word = queue[index % Math.max(queue.length, 1)]
   const progress = useMemo(() => Math.round((sessionDone / Math.max(queue.length, 1)) * 100), [queue.length, sessionDone])
+  const example = word ? exampleForWord(word) : null
 
   const speak = () => {
     if (!word || !('speechSynthesis' in window)) return
@@ -53,17 +56,23 @@ export function ReviewPage({ study }: { study: StudyController }) {
     <div className="page review-page">
       <header className="product-page-head compact">
         <div><span className="eyebrow">SMART REVIEW</span><h1>今日复习</h1><p>先努力回忆，再翻面。诚实选择难度，比快速刷完更有效。</p></div>
-        <div className="review-count"><Brain size={22} /><strong>{queue.length - sessionDone}</strong><span>张待复习</span></div>
+        <div className="review-head-actions"><Link to="/bookmarks"><Bookmark size={16} />重点单词</Link><div className="review-count"><Brain size={22} /><strong>{queue.length - sessionDone}</strong><span>张待复习</span></div></div>
       </header>
 
       <section className="srs-shell">
         <div className="srs-progress"><i style={{ width: `${progress}%` }} /></div>
         <div className="srs-meta"><span>今日队列</span><b>{sessionDone + 1} / {queue.length}</b></div>
+        <button
+          type="button"
+          className={`bookmark-toggle ${study.isBookmarked(word) ? 'active' : ''}`}
+          onClick={() => study.toggleBookmark(word)}
+          aria-label={study.isBookmarked(word) ? '取消重点标记' : '标记为重点单词'}
+        ><Bookmark size={17} fill={study.isBookmarked(word) ? 'currentColor' : 'none'} />{study.isBookmarked(word) ? '已标记重点' : '标记重点'}</button>
         <button className={`srs-card ${revealed ? 'revealed' : ''}`} onClick={() => setRevealed((value) => !value)}>
           <small>{revealed ? '答案' : '看到这个词，你能想起意思吗？'}</small>
           <strong dangerouslySetInnerHTML={{ __html: japaneseMarkup(word.word || word.kanji || word.kana) }} />
           <span>{word.kana.replace(/@\d*/g, '')}</span>
-          {revealed && <div><em>{word.desc}</em><small>{word.pos}</small></div>}
+          {revealed && <div><em>{word.desc}</em><small>{word.pos}</small>{example && <blockquote><span>课文原句</span><p>{example.sentence}</p><cite>第 {example.lessonId} 课 · {example.section}</cite></blockquote>}</div>}
         </button>
         <button className="speak-button" onClick={speak}><Volume2 size={17} />听读音</button>
         {!revealed ? (

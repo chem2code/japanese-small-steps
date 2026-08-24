@@ -1,22 +1,27 @@
 import { useEffect, useMemo, useState } from 'react'
-import { ArrowLeft, ArrowRight, Check, RotateCcw, X } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Bookmark, Check, RotateCcw, X } from 'lucide-react'
 import type { Word } from '../lessonDetails'
 import { japaneseMarkup } from '../content'
+import { exampleForWord } from '../wordExamples'
+import type { StudyController } from '../study'
 
 export function FlashcardStudy({
   words,
   title,
   onClose,
+  study,
 }: {
   words: Word[]
   title: string
   onClose: () => void
+  study: StudyController
 }) {
   const [index, setIndex] = useState(0)
   const [flipped, setFlipped] = useState(false)
   const [known, setKnown] = useState<Set<number>>(() => new Set())
   const word = words[index]
   const progress = useMemo(() => Math.round(((index + 1) / words.length) * 100), [index, words.length])
+  const example = word ? exampleForWord(word) : null
 
   const move = (direction: number) => {
     setIndex((current) => (current + direction + words.length) % words.length)
@@ -51,6 +56,9 @@ export function FlashcardStudy({
         </header>
         <div className="study-progress"><i style={{ width: `${progress}%` }} /></div>
         <div className="study-meta"><span>{index + 1} / {words.length}</span><span>已掌握 {known.size}</span></div>
+        <button className={`bookmark-toggle study-bookmark ${study.isBookmarked(word) ? 'active' : ''}`} onClick={() => study.toggleBookmark(word)}>
+          <Bookmark size={16} fill={study.isBookmarked(word) ? 'currentColor' : 'none'} />{study.isBookmarked(word) ? '已标记重点' : '标记重点'}
+        </button>
         <button className={`flashcard ${flipped ? 'is-flipped' : ''}`} onClick={() => setFlipped((value) => !value)}>
           {!flipped ? (
             <span className="flashcard-front">
@@ -62,6 +70,7 @@ export function FlashcardStudy({
             <span className="flashcard-back">
               <small>{word.pos}</small>
               <strong>{word.desc}</strong>
+              {example && <blockquote><span>课文原句</span><p>{example.sentence}</p></blockquote>}
               <span>按空格翻面 · 方向键切换</span>
             </span>
           )}
