@@ -25,6 +25,19 @@ function ContentBlock({ source }: { source: string }) {
   return <div className="formatted-content" dangerouslySetInnerHTML={{ __html: renderContent(source) }} />
 }
 
+function speakJapanese(text: string) {
+  if (!('speechSynthesis' in window)) return
+  document.querySelectorAll<HTMLMediaElement>('audio, video').forEach((media) => media.pause())
+  window.speechSynthesis.cancel()
+  const utterance = new SpeechSynthesisUtterance(text)
+  const japaneseVoice = window.speechSynthesis.getVoices().find((voice) => voice.lang.toLowerCase().startsWith('ja'))
+  if (japaneseVoice) utterance.voice = japaneseVoice
+  utterance.lang = 'ja-JP'
+  utterance.rate = 0.82
+  utterance.pitch = 1
+  window.speechSynthesis.speak(utterance)
+}
+
 function GrammarCard({ grammar, lesson }: { grammar: Grammar; lesson: (typeof beginnerLessons)[number] }) {
   const example = grammarExampleForLesson(grammar, lesson)
   return (
@@ -33,7 +46,12 @@ function GrammarCard({ grammar, lesson }: { grammar: Grammar; lesson: (typeof be
       <p>{grammar.explanation.replace(/\\n/g, ' ')}</p>
       {example ? (
         <blockquote className="grammar-example">
-          <span>课文原句</span>
+          <div className="grammar-example-head">
+            <span>课文原句</span>
+            <button type="button" onClick={() => speakJapanese(example.sentence)} aria-label={`播放例句：${example.sentence}`}>
+              <Volume2 size={14} />播放例句
+            </button>
+          </div>
           <p>{example.sentence}</p>
           <cite>第 {lesson.id} 课 · {example.section}</cite>
         </blockquote>
@@ -129,12 +147,14 @@ export function LessonPage({ progress, study }: { progress: Progress; study: Stu
   }
 
   const handleLessonTrackPlay = () => {
+    window.speechSynthesis?.cancel()
     unitAudioRef.current?.pause()
     wordAudioRef.current?.pause()
     stopWordAudio()
   }
 
   const handleWordTrackPlay = () => {
+    window.speechSynthesis?.cancel()
     unitAudioRef.current?.pause()
     lessonAudioRef.current?.pause()
     stopWordAudio()
@@ -296,6 +316,7 @@ export function LessonPage({ progress, study }: { progress: Progress; study: Stu
               lessons={unitLessons}
               audioRef={unitAudioRef}
               onPlay={() => {
+                window.speechSynthesis?.cancel()
                 lessonAudioRef.current?.pause()
                 wordAudioRef.current?.pause()
                 stopWordAudio()
