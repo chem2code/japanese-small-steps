@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { beginnerLessons, intermediateLessons, lessonKey, type Lesson, type Level } from '../data'
 import { plainJapanese } from '../content'
+import { UnitAudioPlayer } from '../components/UnitAudioPlayer'
 
 interface Progress { completed: string[]; toggle: (key: string) => void }
 
@@ -45,6 +46,7 @@ function LevelSection({ level, lessons, progress }: { level: Level; lessons: Les
                 <ChevronDown size={18} />
               </summary>
               <div className="unit-lessons">
+                <UnitAudioPlayer level={level} lessons={unitLessons} />
                 {unitLessons.map((lesson) => {
                   const completed = progress.completed.includes(lessonKey(level, lesson.id))
                   return (

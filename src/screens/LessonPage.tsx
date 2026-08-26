@@ -14,12 +14,34 @@ import { assetUrl } from '../assetUrl'
 import { getLessonMedia } from '../lessonMedia'
 import { bilibiliPlayerUrl, bilibiliVideoUrl, videosForLesson } from '../lessonVideos'
 import { FlashcardStudy } from '../components/FlashcardStudy'
+import { UnitAudioPlayer } from '../components/UnitAudioPlayer'
 import type { StudyController } from '../study'
+import { grammarExampleForLesson, grammarPracticePattern } from '../grammarExamples'
+import type { Grammar } from '../lessonDetails'
 
 interface Progress { completed: string[]; toggle: (key: string) => void }
 
 function ContentBlock({ source }: { source: string }) {
   return <div className="formatted-content" dangerouslySetInnerHTML={{ __html: renderContent(source) }} />
+}
+
+function GrammarCard({ grammar, lesson }: { grammar: Grammar; lesson: (typeof beginnerLessons)[number] }) {
+  const example = grammarExampleForLesson(grammar, lesson)
+  return (
+    <article className="grammar-card">
+      <strong>{grammar.expression}</strong>
+      <p>{grammar.explanation.replace(/\\n/g, ' ')}</p>
+      {example ? (
+        <blockquote className="grammar-example">
+          <span>课文原句</span>
+          <p>{example.sentence}</p>
+          <cite>第 {lesson.id} 课 · {example.section}</cite>
+        </blockquote>
+      ) : (
+        <div className="grammar-pattern"><span>替换练习</span><code>{grammarPracticePattern(grammar)}</code></div>
+      )}
+    </article>
+  )
 }
 
 function LessonAudio({ src, label, helper, audioRef: providedRef, onPlay }: { src: string; label: string; helper: string; audioRef?: RefObject<HTMLAudioElement | null>; onPlay?: () => void }) {
@@ -70,6 +92,7 @@ export function LessonPage({ progress, study }: { progress: Progress; study: Stu
   const lessonWords = useMemo(() => level === 'beginner' ? wordsForLesson(id) : [], [id, level])
   const lessonGrammar = useMemo(() => level === 'beginner' ? grammarForLesson(id) : [], [id, level])
   const lessonAudioRef = useRef<HTMLAudioElement>(null)
+  const unitAudioRef = useRef<HTMLAudioElement>(null)
   const wordAudioRef = useRef<HTMLAudioElement>(null)
   const wordItemAudioRef = useRef<HTMLAudioElement>(null)
   const sceneVideoRef = useRef<HTMLVideoElement>(null)
@@ -106,11 +129,13 @@ export function LessonPage({ progress, study }: { progress: Progress; study: Stu
   }
 
   const handleLessonTrackPlay = () => {
+    unitAudioRef.current?.pause()
     wordAudioRef.current?.pause()
     stopWordAudio()
   }
 
   const handleWordTrackPlay = () => {
+    unitAudioRef.current?.pause()
     lessonAudioRef.current?.pause()
     stopWordAudio()
   }
@@ -129,6 +154,7 @@ export function LessonPage({ progress, study }: { progress: Progress; study: Stu
     if (!word || !audio) return
 
     lessonAudioRef.current?.pause()
+    unitAudioRef.current?.pause()
     wordAudioRef.current?.pause()
     stopWordAudio()
     audio.src = assetUrl(`/assets/audio/word-items/l${id}/${index}.mp3`)
@@ -139,6 +165,7 @@ export function LessonPage({ progress, study }: { progress: Progress; study: Stu
 
   const toggleVideo = (videoKey: string) => {
     lessonAudioRef.current?.pause()
+    unitAudioRef.current?.pause()
     wordAudioRef.current?.pause()
     sceneVideoRef.current?.pause()
     stopWordAudio()
@@ -148,6 +175,7 @@ export function LessonPage({ progress, study }: { progress: Progress; study: Stu
 
   const toggleSceneVideo = () => {
     lessonAudioRef.current?.pause()
+    unitAudioRef.current?.pause()
     wordAudioRef.current?.pause()
     stopWordAudio()
     setActiveVideo(null)
@@ -157,6 +185,7 @@ export function LessonPage({ progress, study }: { progress: Progress; study: Stu
 
   const handleSceneVideoPlay = () => {
     lessonAudioRef.current?.pause()
+    unitAudioRef.current?.pause()
     wordAudioRef.current?.pause()
     stopWordAudio()
     setActiveVideo(null)
@@ -262,6 +291,16 @@ export function LessonPage({ progress, study }: { progress: Progress; study: Stu
               label="课文录音"
               helper="建议先听一遍，再用 0.8× 逐句跟读"
             />
+            <UnitAudioPlayer
+              level={level}
+              lessons={unitLessons}
+              audioRef={unitAudioRef}
+              onPlay={() => {
+                lessonAudioRef.current?.pause()
+                wordAudioRef.current?.pause()
+                stopWordAudio()
+              }}
+            />
             {lessonVideos.length > 0 && (
               <section className="lesson-videos" aria-labelledby="lesson-video-heading">
                 <div className="lesson-videos-heading">
@@ -366,7 +405,7 @@ export function LessonPage({ progress, study }: { progress: Progress; study: Stu
 
           {lessonGrammar.length > 0 && <section id="grammar" className="lesson-section">
             <div className="lesson-section-title"><span>02</span><div><h2>语法要点</h2><p>本课需要掌握的核心表达</p></div></div>
-            <div className="grammar-list">{lessonGrammar.map((item, index) => <div className="grammar-card" key={`${item.expression}-${index}`}><strong>{item.expression}</strong><p>{item.explanation.replace(/\\n/g, ' ')}</p></div>)}</div>
+            <div className="grammar-list">{lessonGrammar.map((item, index) => <GrammarCard grammar={item} lesson={lesson} key={`${item.expression}-${index}`} />)}</div>
           </section>}
 
           {lessonWords.length > 0 && <section id="words" className="lesson-section">
