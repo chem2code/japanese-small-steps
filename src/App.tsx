@@ -4,6 +4,7 @@ import {
   Bookmark,
   Brain,
   ChevronRight,
+  Clapperboard,
   Home,
 } from 'lucide-react'
 import { useStudy } from './study'
@@ -12,20 +13,23 @@ import { CoursesPage } from './screens/CoursesPage'
 import { LessonPage } from './screens/LessonPage'
 import { ReviewPage } from './screens/ReviewPage'
 import { BookmarksPage } from './screens/BookmarksPage'
+import { ShortsPage } from './screens/ShortsPage'
 
 const nav = [
   { to: '/', label: '学习首页', icon: Home, end: true },
+  { to: '/courses', label: '课程资料库', icon: BookOpen },
+  { to: '/shorts', label: '刷课文', icon: Clapperboard },
   { to: '/review', label: '智能复习', icon: Brain },
   { to: '/bookmarks', label: '我的收藏', icon: Bookmark },
-  { to: '/courses', label: '课程资料库', icon: BookOpen },
 ]
 
 export default function App() {
   const location = useLocation()
   const study = useStudy()
+  const shortsMode = location.pathname === '/shorts'
 
   return (
-    <div className="app-shell">
+    <div className={`app-shell ${shortsMode ? 'shorts-mode' : ''}`}>
       <a className="skip-link" href="#main">跳到正文</a>
       <aside className="sidebar">
         <Link className="brand" to="/">
@@ -61,6 +65,7 @@ export default function App() {
             <Route path="/practice" element={<Navigate to="/" replace />} />
             <Route path="/review" element={<ReviewPage study={study} />} />
             <Route path="/bookmarks" element={<BookmarksPage study={study} />} />
+            <Route path="/shorts" element={<ShortsPage />} />
             <Route path="/courses" element={<CoursesPage />} />
             <Route path="/lesson/:level/:id" element={<LessonPage study={study} />} />
             <Route path="/library" element={<Navigate to="/courses" replace />} />
@@ -78,7 +83,7 @@ export default function App() {
               }
             >
               <Icon size={22} strokeWidth={2.1} />
-              <span>{label === '学习首页' ? '首页' : label === '课程资料库' ? '课程' : label === '我的收藏' ? '收藏' : '复习'}</span>
+              <span>{label === '学习首页' ? '首页' : label === '课程资料库' ? '课程' : label === '刷课文' ? '刷课文' : label === '我的收藏' ? '收藏' : '复习'}</span>
             </NavLink>
           ))}
         </nav>

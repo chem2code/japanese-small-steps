@@ -456,7 +456,7 @@ button:active,
     left: 0.75rem;
     z-index: 100;
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(5, 1fr);
     height: 4.25rem;
     padding: 0.38rem;
     border: 1px solid var(--glass-edge);
@@ -476,7 +476,7 @@ button:active,
     gap: 0.15rem;
     border-radius: 1.05rem;
     color: var(--apple-tertiary);
-    font-size: 0.64rem;
+    font-size: 0.6rem;
     font-weight: 650;
     transition: color 160ms ease, background 160ms ease, transform 100ms ease-out;
   }
