@@ -1,9 +1,11 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Bookmark, Brain, CheckCircle2, RotateCcw, Volume2, X } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { japaneseMarkup } from '../content'
-import { type ReviewGrade, type StudyController } from '../study'
+import { type ReviewGrade, type StudyController, wordId } from '../study'
 import { exampleForWord } from '../wordExamples'
+import { wordsForLesson } from '../lessonDetails'
+import { assetUrl } from '../assetUrl'
 
 const labels: Record<ReviewGrade, { title: string; hint: string }> = {
   again: { title: '忘了', hint: '10分钟后' },
@@ -20,8 +22,14 @@ export function ReviewPage({ study }: { study: StudyController }) {
   const word = queue[index % Math.max(queue.length, 1)]
   const progress = useMemo(() => Math.round((sessionDone / Math.max(queue.length, 1)) * 100), [queue.length, sessionDone])
   const example = word ? exampleForWord(word) : null
+  const audioRef = useRef<HTMLAudioElement | null>(null)
 
-  const speak = () => {
+  useEffect(() => () => {
+    audioRef.current?.pause()
+    window.speechSynthesis?.cancel()
+  }, [])
+
+  const fallbackSpeak = () => {
     if (!word || !('speechSynthesis' in window)) return
     window.speechSynthesis.cancel()
     const utterance = new SpeechSynthesisUtterance((word.word || word.kanji || word.kana).replace(/@\d*/g, ''))
@@ -30,8 +38,26 @@ export function ReviewPage({ study }: { study: StudyController }) {
     window.speechSynthesis.speak(utterance)
   }
 
+  const speak = () => {
+    if (!word) return
+    const lessonId = Number(word.lesson.match(/\d+/)?.[0])
+    const wordIndex = Number.isFinite(lessonId)
+      ? wordsForLesson(lessonId).findIndex((item) => wordId(item) === wordId(word))
+      : -1
+    if (!lessonId || wordIndex < 0) { fallbackSpeak(); return }
+
+    window.speechSynthesis?.cancel()
+    audioRef.current?.pause()
+    const audio = new Audio(assetUrl(`/assets/audio/word-items/l${lessonId}/${wordIndex}.mp3`))
+    audio.preload = 'auto'
+    audioRef.current = audio
+    void audio.play().catch(fallbackSpeak)
+  }
+
   const grade = (value: ReviewGrade) => {
     if (!word) return
+    audioRef.current?.pause()
+    window.speechSynthesis?.cancel()
     study.gradeWord(word, value)
     setSessionDone((current) => current + 1)
     setIndex((current) => current + 1)
@@ -79,7 +105,7 @@ export function ReviewPage({ study }: { study: StudyController }) {
           const saved = study.isSentenceBookmarked(sentence)
           return <button className={`sentence-review-bookmark ${saved ? 'active' : ''}`} type="button" onClick={() => study.toggleSentenceBookmark(sentence)}><Bookmark size={15} fill={saved ? 'currentColor' : 'none'} />{saved ? '已收藏例句' : '收藏这条例句'}</button>
         })()}
-        <button className="speak-button" onClick={speak}><Volume2 size={17} />听读音</button>
+        <button className="speak-button" onClick={speak}><Volume2 size={17} />听自然读音</button>
         {!revealed ? (
           <button className="button primary reveal-button" onClick={() => setRevealed(true)}>显示答案</button>
         ) : (
