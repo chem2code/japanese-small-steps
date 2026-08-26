@@ -56,7 +56,7 @@ export function ReviewPage({ study }: { study: StudyController }) {
     <div className="page review-page">
       <header className="product-page-head compact">
         <div><span className="eyebrow">SMART REVIEW</span><h1>今日复习</h1><p>先努力回忆，再翻面。诚实选择难度，比快速刷完更有效。</p></div>
-        <div className="review-head-actions"><Link to="/bookmarks"><Bookmark size={16} />重点单词</Link><div className="review-count"><Brain size={22} /><strong>{queue.length - sessionDone}</strong><span>张待复习</span></div></div>
+        <div className="review-head-actions"><Link to="/bookmarks"><Bookmark size={16} />我的收藏</Link><div className="review-count"><Brain size={22} /><strong>{queue.length - sessionDone}</strong><span>张待复习</span></div></div>
       </header>
 
       <section className="srs-shell">
@@ -74,6 +74,11 @@ export function ReviewPage({ study }: { study: StudyController }) {
           <span>{word.kana.replace(/@\d*/g, '')}</span>
           {revealed && <div><em>{word.desc}</em><small>{word.pos}</small>{example && <blockquote><span>课文原句</span><p>{example.sentence}</p><cite>第 {example.lessonId} 课 · {example.section}</cite></blockquote>}</div>}
         </button>
+        {revealed && example && (() => {
+          const sentence = { sentence: example.sentence, lessonId: example.lessonId, section: example.section }
+          const saved = study.isSentenceBookmarked(sentence)
+          return <button className={`sentence-review-bookmark ${saved ? 'active' : ''}`} type="button" onClick={() => study.toggleSentenceBookmark(sentence)}><Bookmark size={15} fill={saved ? 'currentColor' : 'none'} />{saved ? '已收藏例句' : '收藏这条例句'}</button>
+        })()}
         <button className="speak-button" onClick={speak}><Volume2 size={17} />听读音</button>
         {!revealed ? (
           <button className="button primary reveal-button" onClick={() => setRevealed(true)}>显示答案</button>

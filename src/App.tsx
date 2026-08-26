@@ -5,11 +5,8 @@ import {
   Brain,
   ChevronRight,
   Home,
-  Sparkles,
 } from 'lucide-react'
-import { useProgress } from './useProgress'
 import { useStudy } from './study'
-import { beginnerLessons, lessonKey } from './data'
 import { HomePage } from './screens/HomePage'
 import { CoursesPage } from './screens/CoursesPage'
 import { LessonPage } from './screens/LessonPage'
@@ -19,21 +16,13 @@ import { BookmarksPage } from './screens/BookmarksPage'
 const nav = [
   { to: '/', label: '学习首页', icon: Home, end: true },
   { to: '/review', label: '智能复习', icon: Brain },
-  { to: '/bookmarks', label: '重点单词', icon: Bookmark },
+  { to: '/bookmarks', label: '我的收藏', icon: Bookmark },
   { to: '/courses', label: '课程资料库', icon: BookOpen },
 ]
 
 export default function App() {
   const location = useLocation()
-  const progress = useProgress()
   const study = useStudy()
-  const completedBeginner = beginnerLessons.filter((lesson) =>
-    progress.completed.includes(lessonKey('beginner', lesson.id)),
-  ).length
-  const nextLesson =
-    beginnerLessons.find((lesson) => !progress.completed.includes(lessonKey('beginner', lesson.id)))
-    ?? beginnerLessons.at(-1)
-    ?? beginnerLessons[0]!
 
   return (
     <div className="app-shell">
@@ -52,28 +41,28 @@ export default function App() {
           ))}
         </nav>
         <div className="daily-card">
-          <Sparkles size={16} />
-          <span>学习进度</span>
-          <strong>初级第 {nextLesson.id} 课</strong>
-          <small>已完成 {completedBeginner} / {beginnerLessons.length} 课</small>
+          <BookOpen size={16} />
+          <span>在线教材</span>
+          <strong>新标日初级 + 中级</strong>
+          <small>80 课课文、语法、词汇与音频</small>
         </div>
       </aside>
       <div className="app-main">
         <header className="mobile-header">
           <Link to="/" className="mobile-brand"><span className="mobile-brand-mark">歩</span><strong>日语小步</strong></Link>
-          <Link className="mobile-progress-pill" to={`/lesson/beginner/${nextLesson.id}`}>
-            <span>继续学习</span><b>第 {nextLesson.id} 课</b>
+          <Link className="mobile-progress-pill" to="/courses">
+            <span>打开教材</span><b>课程目录</b>
           </Link>
         </header>
         <main id="main">
           <Routes>
-            <Route path="/" element={<HomePage study={study} progress={progress} />} />
+            <Route path="/" element={<HomePage study={study} />} />
             <Route path="/plan" element={<Navigate to="/" replace />} />
             <Route path="/practice" element={<Navigate to="/" replace />} />
             <Route path="/review" element={<ReviewPage study={study} />} />
             <Route path="/bookmarks" element={<BookmarksPage study={study} />} />
-            <Route path="/courses" element={<CoursesPage progress={progress} />} />
-            <Route path="/lesson/:level/:id" element={<LessonPage progress={progress} study={study} />} />
+            <Route path="/courses" element={<CoursesPage />} />
+            <Route path="/lesson/:level/:id" element={<LessonPage study={study} />} />
             <Route path="/library" element={<Navigate to="/courses" replace />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
@@ -89,7 +78,7 @@ export default function App() {
               }
             >
               <Icon size={22} strokeWidth={2.1} />
-              <span>{label === '学习首页' ? '学习' : label === '课程资料库' ? '课程' : label === '重点单词' ? '重点' : '复习'}</span>
+              <span>{label === '学习首页' ? '首页' : label === '课程资料库' ? '课程' : label === '我的收藏' ? '收藏' : '复习'}</span>
             </NavLink>
           ))}
         </nav>

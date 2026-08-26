@@ -1,10 +1,9 @@
 import { useEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, ArrowRight, Bookmark, Check, CheckCircle2, ChevronDown, Clapperboard, Download, ExternalLink, Eye, EyeOff, Layers3, PlayCircle, Volume2 } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Bookmark, ChevronDown, Clapperboard, Download, ExternalLink, Eye, EyeOff, Layers3, PlayCircle, Volume2 } from 'lucide-react'
 import {
   beginnerLessons,
   intermediateLessons,
-  lessonKey,
   type Level,
 } from '../data'
 import { grammarForLesson, wordsForLesson } from '../lessonDetails'
@@ -18,8 +17,6 @@ import { UnitAudioPlayer } from '../components/UnitAudioPlayer'
 import type { StudyController } from '../study'
 import { grammarExampleForLesson, grammarPracticePattern } from '../grammarExamples'
 import type { Grammar } from '../lessonDetails'
-
-interface Progress { completed: string[]; toggle: (key: string) => void }
 
 function ContentBlock({ source }: { source: string }) {
   return <div className="formatted-content" dangerouslySetInnerHTML={{ __html: renderContent(source) }} />
@@ -49,8 +46,16 @@ function playGrammarExample(text: string, src: string) {
   void activeGrammarAudio.play().catch(() => speakJapanese(text))
 }
 
-function GrammarCard({ grammar, lesson }: { grammar: Grammar; lesson: (typeof beginnerLessons)[number] }) {
+function GrammarCard({ grammar, lesson, study }: { grammar: Grammar; lesson: (typeof beginnerLessons)[number]; study: StudyController }) {
   const example = grammarExampleForLesson(grammar, lesson)
+  const bookmark = example ? {
+    sentence: example.sentence,
+    lessonId: lesson.id,
+    section: example.section,
+    grammarExpression: grammar.expression,
+    audioPath: `/assets/audio/grammar-examples/g${grammar.idx}.mp3`,
+  } : null
+  const saved = bookmark ? study.isSentenceBookmarked(bookmark) : false
   return (
     <article className="grammar-card">
       <strong>{grammar.expression}</strong>
@@ -61,6 +66,9 @@ function GrammarCard({ grammar, lesson }: { grammar: Grammar; lesson: (typeof be
             <span>课文原句</span>
             <button type="button" onClick={() => playGrammarExample(example.sentence, assetUrl(`/assets/audio/grammar-examples/g${grammar.idx}.mp3`))} aria-label={`播放例句：${example.sentence}`}>
               <Volume2 size={14} />自然语音
+            </button>
+            <button className={saved ? 'saved' : ''} type="button" onClick={() => bookmark && study.toggleSentenceBookmark(bookmark)} aria-label={saved ? '取消收藏例句' : '收藏例句'}>
+              <Bookmark size={14} fill={saved ? 'currentColor' : 'none'} />{saved ? '已收藏' : '收藏例句'}
             </button>
           </div>
           <p>{example.sentence}</p>
@@ -101,7 +109,7 @@ function LessonAudio({ src, label, helper, audioRef: providedRef, onPlay }: { sr
   )
 }
 
-export function LessonPage({ progress, study }: { progress: Progress; study: StudyController }) {
+export function LessonPage({ study }: { study: StudyController }) {
   const params = useParams()
   const navigate = useNavigate()
   const level = (params.level === 'intermediate' ? 'intermediate' : 'beginner') as Level
@@ -141,10 +149,8 @@ export function LessonPage({ progress, study }: { progress: Progress; study: Stu
 
   if (!lesson) return <div className="page empty-state">没有找到这节课程。<Link to="/courses">返回课程地图</Link></div>
 
-  const key = lessonKey(level, id)
   const audioPrefix = level === 'beginner' ? 'l' : 'm'
   const lessonMedia = getLessonMedia(level, id)
-  const completed = progress.completed.includes(key)
   const previous = id > 1 ? id - 1 : null
   const next = id < lessons.length ? id + 1 : null
 
@@ -228,18 +234,6 @@ export function LessonPage({ progress, study }: { progress: Progress; study: Stu
     window.setTimeout(() => setExported(false), 2_500)
   }
 
-  const toggleLessonCompletion = () => {
-    progress.toggle(key)
-    if (level === 'beginner') {
-      const savedInStudy = study.completedDays.includes(id)
-      if ((completed && savedInStudy) || (!completed && !savedInStudy)) study.toggleLesson(id)
-    }
-  }
-
-  const completeLesson = () => {
-    if (!completed) toggleLessonCompletion()
-  }
-
   const scrollToSection = (sectionId: string) => {
     document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
@@ -287,9 +281,7 @@ export function LessonPage({ progress, study }: { progress: Progress; study: Stu
           </label>
           <small>{id}/{lessons.length}</small>
         </div>
-        <button className={completed ? 'completed' : ''} onClick={toggleLessonCompletion}>
-          {completed ? <CheckCircle2 size={17} /> : <Check size={17} />}{completed ? '已完成' : '标记完成'}
-        </button>
+        <Link className="lesson-collection-link" to="/bookmarks"><Bookmark size={16} />我的收藏</Link>
       </header>
       <div className="lesson-layout">
         <aside className="lesson-outline">
@@ -437,7 +429,7 @@ export function LessonPage({ progress, study }: { progress: Progress; study: Stu
 
           {lessonGrammar.length > 0 && <section id="grammar" className="lesson-section">
             <div className="lesson-section-title"><span>02</span><div><h2>语法要点</h2><p>本课需要掌握的核心表达</p></div></div>
-            <div className="grammar-list">{lessonGrammar.map((item, index) => <GrammarCard grammar={item} lesson={lesson} key={`${item.expression}-${index}`} />)}</div>
+            <div className="grammar-list">{lessonGrammar.map((item, index) => <GrammarCard grammar={item} lesson={lesson} study={study} key={`${item.expression}-${index}`} />)}</div>
           </section>}
 
           {lessonWords.length > 0 && <section id="words" className="lesson-section">
@@ -463,10 +455,6 @@ export function LessonPage({ progress, study }: { progress: Progress; study: Stu
             <div className="word-grid">{lessonWords.map((word, index) => <article className={`word-card ${activeWord === index ? 'is-speaking' : ''}`} key={`${word.lesson}-${index}`}><button className="word-card-audio" type="button" onClick={() => playWordAudio(index)}><span dangerouslySetInnerHTML={{ __html: japaneseMarkup(word.word || word.kanji) }} /><small>{word.kana.replace(/@\d*/g, '')}</small><b>{word.desc}</b><Volume2 size={14} /></button><button type="button" className={`word-bookmark ${study.isBookmarked(word) ? 'active' : ''}`} onClick={() => study.toggleBookmark(word)} aria-label={study.isBookmarked(word) ? '取消重点标记' : '标记为重点单词'} title={study.isBookmarked(word) ? '取消重点标记' : '标记为重点单词'}><Bookmark size={15} fill={study.isBookmarked(word) ? 'currentColor' : 'none'} /></button></article>)}</div>
           </section>}
 
-          <div className="lesson-finish">
-            <div><CheckCircle2 size={29} /><span><strong>完成本课了吗？</strong><small>标记后，学习进度会保存在这台设备上。</small></span></div>
-            <button className={completed ? 'completed' : ''} onClick={completeLesson}>{completed ? '已完成本课' : '完成并进入练习'}</button>
-          </div>
           <nav className="lesson-pagination">
             {previous ? <Link to={`/lesson/${level}/${previous}`}><ArrowLeft />第 {previous} 课</Link> : <span />}
             {next ? <Link to={`/lesson/${level}/${next}`}>第 {next} 课<ArrowRight /></Link> : <Link to="/courses">返回课程地图<ArrowRight /></Link>}

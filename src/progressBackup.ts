@@ -27,7 +27,7 @@ export function downloadProgressBackup() {
   const url = URL.createObjectURL(blob)
   const link = document.createElement('a')
   link.href = url
-  link.download = `japanese-small-steps-progress-${new Date().toISOString().slice(0, 10)}.json`
+  link.download = `jstep-collections-${new Date().toISOString().slice(0, 10)}.json`
   link.click()
   window.setTimeout(() => URL.revokeObjectURL(url), 1_000)
 }

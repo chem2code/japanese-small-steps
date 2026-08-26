@@ -18,13 +18,27 @@ interface StudyState {
   review: Record<string, ReviewState>
   activityDates: string[]
   bookmarkedWordIds: string[]
+  bookmarkedSentences: BookmarkedSentence[]
 }
+
+export interface BookmarkedSentence {
+  id: string
+  sentence: string
+  lessonId: number
+  section: '基本课文' | '应用课文'
+  grammarExpression?: string
+  audioPath?: string
+  savedAt: string
+}
+
+export interface SentenceBookmarkInput extends Omit<BookmarkedSentence, 'id' | 'savedAt'> {}
 
 const initialState: StudyState = {
   completedDays: [],
   review: {},
   activityDates: [],
   bookmarkedWordIds: [],
+  bookmarkedSentences: [],
 }
 
 export const wordId = (word: Word) =>
@@ -42,6 +56,7 @@ function readState(): StudyState {
       review: parsed.review || {},
       activityDates: parsed.activityDates || [],
       bookmarkedWordIds: parsed.bookmarkedWordIds || [],
+      bookmarkedSentences: parsed.bookmarkedSentences || [],
     }
   } catch {
     return initialState
@@ -115,6 +130,20 @@ export function useStudy() {
     })
   }, [])
 
+  const sentenceId = useCallback((item: SentenceBookmarkInput) =>
+    `${item.lessonId}:${item.section}:${item.sentence}`, [])
+
+  const toggleSentenceBookmark = useCallback((item: SentenceBookmarkInput) => {
+    setState((current) => {
+      const id = `${item.lessonId}:${item.section}:${item.sentence}`
+      const exists = current.bookmarkedSentences.some((sentence) => sentence.id === id)
+      const bookmarkedSentences = exists
+        ? current.bookmarkedSentences.filter((sentence) => sentence.id !== id)
+        : [{ ...item, id, savedAt: new Date().toISOString() }, ...current.bookmarkedSentences]
+      return { ...current, bookmarkedSentences }
+    })
+  }, [])
+
   const currentLessonId =
     beginnerLessons.find((lesson) => !state.completedDays.includes(lesson.id))?.id
     ?? beginnerLessons.at(-1)?.id
@@ -159,8 +188,11 @@ export function useStudy() {
     toggleLesson,
     gradeWord,
     toggleBookmark,
+    toggleSentenceBookmark,
     bookmarkedWords,
     isBookmarked: (word: Word) => state.bookmarkedWordIds.includes(wordId(word)),
+    isSentenceBookmarked: (item: SentenceBookmarkInput) =>
+      state.bookmarkedSentences.some((sentence) => sentence.id === sentenceId(item)),
     lessonCompleted: state.completedDays.includes(currentLessonId),
   }
 }
