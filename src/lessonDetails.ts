@@ -12,6 +12,7 @@ export interface Word {
 }
 
 export interface Grammar {
+  idx: string
   expression: string
   shortexplain: string
   explanation: string

@@ -38,6 +38,17 @@ function speakJapanese(text: string) {
   window.speechSynthesis.speak(utterance)
 }
 
+let activeGrammarAudio: HTMLAudioElement | null = null
+
+function playGrammarExample(text: string, src: string) {
+  document.querySelectorAll<HTMLMediaElement>('audio, video').forEach((media) => media.pause())
+  window.speechSynthesis?.cancel()
+  activeGrammarAudio?.pause()
+  activeGrammarAudio = new Audio(src)
+  activeGrammarAudio.preload = 'auto'
+  void activeGrammarAudio.play().catch(() => speakJapanese(text))
+}
+
 function GrammarCard({ grammar, lesson }: { grammar: Grammar; lesson: (typeof beginnerLessons)[number] }) {
   const example = grammarExampleForLesson(grammar, lesson)
   return (
@@ -48,8 +59,8 @@ function GrammarCard({ grammar, lesson }: { grammar: Grammar; lesson: (typeof be
         <blockquote className="grammar-example">
           <div className="grammar-example-head">
             <span>课文原句</span>
-            <button type="button" onClick={() => speakJapanese(example.sentence)} aria-label={`播放例句：${example.sentence}`}>
-              <Volume2 size={14} />播放例句
+            <button type="button" onClick={() => playGrammarExample(example.sentence, assetUrl(`/assets/audio/grammar-examples/g${grammar.idx}.mp3`))} aria-label={`播放例句：${example.sentence}`}>
+              <Volume2 size={14} />自然语音
             </button>
           </div>
           <p>{example.sentence}</p>
