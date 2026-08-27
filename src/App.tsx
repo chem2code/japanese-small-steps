@@ -27,9 +27,10 @@ export default function App() {
   const location = useLocation()
   const study = useStudy()
   const shortsMode = location.pathname === '/shorts'
+  const reviewMode = location.pathname === '/review'
 
   return (
-    <div className={`app-shell ${shortsMode ? 'shorts-mode' : ''}`}>
+    <div className={`app-shell ${shortsMode ? 'shorts-mode' : ''} ${reviewMode ? 'review-focus-mode' : ''}`}>
       <a className="skip-link" href="#main">跳到正文</a>
       <aside className="sidebar">
         <Link className="brand" to="/">

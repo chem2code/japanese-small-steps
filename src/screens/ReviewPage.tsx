@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
-import { ArrowLeft, ArrowRight, Bookmark, Brain, CheckCircle2, RotateCcw, Volume2 } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Bookmark, CheckCircle2, RotateCcw, Volume2, X } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { japaneseMarkup, plainJapanese } from '../content'
 import { type ReviewGrade, type StudyController, wordId } from '../study'
@@ -24,6 +24,7 @@ export function ReviewPage({ study }: { study: StudyController }) {
   const [dragX, setDragX] = useState(0)
   const [dragging, setDragging] = useState(false)
   const [exiting, setExiting] = useState<SwipeDirection | null>(null)
+  const [audioBlocked, setAudioBlocked] = useState(false)
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const exitTimerRef = useRef<number | null>(null)
   const dragRef = useRef({ pointerId: -1, startX: 0, lastX: 0, lastTime: 0, velocity: 0, moved: false })
@@ -62,28 +63,49 @@ export function ReviewPage({ study }: { study: StudyController }) {
     if (exitTimerRef.current) window.clearTimeout(exitTimerRef.current)
   }, [])
 
-  const fallbackSpeak = () => {
-    if (!word || !('speechSynthesis' in window)) return
+  const fallbackSpeak = (targetWord = word) => {
+    if (!targetWord || !('speechSynthesis' in window)) return
     window.speechSynthesis.cancel()
-    const utterance = new SpeechSynthesisUtterance((word.word || word.kanji || word.kana).replace(/@\d*/g, ''))
+    const utterance = new SpeechSynthesisUtterance((targetWord.word || targetWord.kanji || targetWord.kana).replace(/@\d*/g, ''))
     utterance.lang = 'ja-JP'
     utterance.rate = 0.85
     window.speechSynthesis.speak(utterance)
   }
 
-  const speak = () => {
-    if (!word) return
-    const sourceLesson = Number(word.lesson.match(/\d+/)?.[0])
+  const speak = (targetWord = word, automatic = false) => {
+    if (!targetWord) return
+    const sourceLesson = Number(targetWord.lesson.match(/\d+/)?.[0])
     const wordIndex = Number.isFinite(sourceLesson)
-      ? wordsForLesson(sourceLesson).findIndex((item) => wordId(item) === wordId(word))
+      ? wordsForLesson(sourceLesson).findIndex((item) => wordId(item) === wordId(targetWord))
       : -1
-    if (!sourceLesson || wordIndex < 0) { fallbackSpeak(); return }
+    if (!sourceLesson || wordIndex < 0) { fallbackSpeak(targetWord); return }
     stopAudio()
-    const audio = new Audio(assetUrl(`/assets/audio/word-items/l${sourceLesson}/${wordIndex}.mp3`))
+    const audio = audioRef.current ?? new Audio()
+    audio.src = assetUrl(`/assets/audio/word-items/l${sourceLesson}/${wordIndex}.mp3`)
     audio.preload = 'auto'
     audioRef.current = audio
-    void audio.play().catch(fallbackSpeak)
+    void audio.play()
+      .then(() => setAudioBlocked(false))
+      .catch(() => {
+        if (automatic) setAudioBlocked(true)
+        else fallbackSpeak(targetWord)
+      })
   }
+
+  const currentWordKey = word ? wordId(word) : ''
+
+  useEffect(() => {
+    if (!word) return
+    const timer = window.setTimeout(() => speak(word, true), 80)
+    return () => window.clearTimeout(timer)
+  }, [currentWordKey])
+
+  useEffect(() => {
+    if (!audioBlocked || !word) return
+    const unlockAudio = () => speak(word, true)
+    window.addEventListener('pointerdown', unlockAudio, { once: true, capture: true })
+    return () => window.removeEventListener('pointerdown', unlockAudio, { capture: true })
+  }, [audioBlocked, currentWordKey])
 
   const advance = (grade: ReviewGrade) => {
     if (!word) return
@@ -102,7 +124,10 @@ export function ReviewPage({ study }: { study: StudyController }) {
     setExiting(direction)
     setDragX((direction === 'right' ? 1 : -1) * Math.max(window.innerWidth, 720))
     if ('vibrate' in navigator) navigator.vibrate(12)
-    exitTimerRef.current = window.setTimeout(() => advance(direction === 'right' ? 'good' : 'again'), 240)
+    exitTimerRef.current = window.setTimeout(() => {
+      if (direction === 'right' && !study.isBookmarked(word)) study.toggleBookmark(word)
+      advance(direction === 'left' ? 'good' : 'again')
+    }, 240)
   }
 
   const onPointerDown = (event: ReactPointerEvent<HTMLElement>) => {
@@ -160,9 +185,10 @@ export function ReviewPage({ study }: { study: StudyController }) {
 
   return (
     <div className="page review-page tinder-review">
-      <header className="product-page-head compact">
-        <div><span className="eyebrow">SWIPE REVIEW</span><h1>卡片复习</h1><p>右滑表示已掌握，左滑表示需要再看。收藏不会改变掌握状态。</p></div>
-        <div className="review-head-actions"><Link to="/bookmarks"><Bookmark size={16} />我的收藏</Link><div className="review-count"><Brain size={22} /><strong>{Math.max(queue.length - sessionDone, 0)}</strong><span>张剩余</span></div></div>
+      <header className="review-focus-topbar">
+        <Link to="/" aria-label="退出卡片复习"><X size={21} /></Link>
+        <div><strong>卡片复习</strong><small>左滑掌握 · 右滑收藏</small></div>
+        <span className={audioBlocked ? 'waiting' : ''}><Volume2 size={15} />{audioBlocked ? '触碰后自动播放' : '自动读音已开启'}</span>
       </header>
 
       <section className="review-scope" aria-label="选择复习范围">
@@ -206,9 +232,9 @@ export function ReviewPage({ study }: { study: StudyController }) {
               onClick={() => { if (!dragRef.current.moved && !exiting) setRevealed((current) => !current) }}
               role="button"
               tabIndex={0}
-              aria-label="点击查看答案，左右滑动记录掌握情况"
+              aria-label="点击查看答案，左滑标记已掌握，右滑收藏复习"
             >
-              <div className="swipe-stamp again"><ArrowLeft />再复习</div><div className="swipe-stamp known">已掌握<ArrowRight /></div>
+              <div className="swipe-stamp known"><ArrowLeft />已掌握</div><div className="swipe-stamp save">收藏复习<ArrowRight /></div>
               <button className={`card-bookmark ${study.isBookmarked(word) ? 'active' : ''}`} type="button" onPointerDown={(event) => event.stopPropagation()} onClick={(event) => { event.stopPropagation(); study.toggleBookmark(word) }} aria-label={study.isBookmarked(word) ? '取消收藏单词' : '收藏单词'}><Bookmark size={19} fill={study.isBookmarked(word) ? 'currentColor' : 'none'} /></button>
               <small>{revealed ? '答案' : '点击翻面查看释义'}</small>
               <strong dangerouslySetInnerHTML={{ __html: japaneseMarkup(word.word || word.kanji || word.kana) }} />
@@ -217,17 +243,16 @@ export function ReviewPage({ study }: { study: StudyController }) {
             </article>
           </div>
 
-          <div className="swipe-hint"><span><ArrowLeft size={14} />需要再看</span><span>点击卡片翻面</span><span>已掌握<ArrowRight size={14} /></span></div>
+          <div className="swipe-hint"><span><ArrowLeft size={14} />已掌握</span><span>点击卡片翻面</span><span>收藏复习<ArrowRight size={14} /></span></div>
           {revealed && example && (() => {
             const sentence = { sentence: example.sentence, lessonId: example.lessonId, section: example.section }
             const saved = study.isSentenceBookmarked(sentence)
             return <button className={`sentence-review-bookmark ${saved ? 'active' : ''}`} type="button" onClick={() => study.toggleSentenceBookmark(sentence)}><Bookmark size={15} fill={saved ? 'currentColor' : 'none'} />{saved ? '已收藏例句' : '收藏这条例句'}</button>
           })()}
-          <button className="speak-button" onClick={speak}><Volume2 size={17} />听自然读音</button>
+          <button className="speak-button" onClick={() => speak()}><Volume2 size={17} />重播读音</button>
           <div className="swipe-actions">
-            <button className="again" type="button" onClick={() => commitSwipe('left')}><ArrowLeft size={20} /><span><b>需要再看</b><small>左滑</small></span></button>
-            <button className={`save ${study.isBookmarked(word) ? 'active' : ''}`} type="button" onClick={() => study.toggleBookmark(word)}><Bookmark size={20} fill={study.isBookmarked(word) ? 'currentColor' : 'none'} /><span><b>{study.isBookmarked(word) ? '已收藏' : '收藏'}</b><small>不跳过</small></span></button>
-            <button className="known" type="button" onClick={() => commitSwipe('right')}><span><b>已掌握</b><small>右滑</small></span><ArrowRight size={20} /></button>
+            <button className="known" type="button" onClick={() => commitSwipe('left')}><ArrowLeft size={20} /><span><b>已掌握</b><small>左滑</small></span></button>
+            <button className="save" type="button" onClick={() => commitSwipe('right')}><span><b>收藏复习</b><small>右滑</small></span><ArrowRight size={20} /></button>
           </div>
         </section>
       )}
