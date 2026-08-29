@@ -235,6 +235,7 @@ export function ReviewPage({ study }: { study: StudyController }) {
               aria-label="点击查看答案，左滑标记已掌握，右滑收藏复习"
             >
               <div className="swipe-stamp known"><ArrowLeft />已掌握</div><div className="swipe-stamp save">收藏复习<ArrowRight /></div>
+              <button className="card-audio" type="button" onPointerDown={(event) => event.stopPropagation()} onClick={(event) => { event.stopPropagation(); speak() }} aria-label="重播当前单词发音"><Volume2 size={20} /><span>重播发音</span></button>
               <button className={`card-bookmark ${study.isBookmarked(word) ? 'active' : ''}`} type="button" onPointerDown={(event) => event.stopPropagation()} onClick={(event) => { event.stopPropagation(); study.toggleBookmark(word) }} aria-label={study.isBookmarked(word) ? '取消收藏单词' : '收藏单词'}><Bookmark size={19} fill={study.isBookmarked(word) ? 'currentColor' : 'none'} /></button>
               <small>{revealed ? '答案' : '点击翻面查看释义'}</small>
               <strong dangerouslySetInnerHTML={{ __html: japaneseMarkup(word.word || word.kanji || word.kana) }} />
@@ -249,7 +250,6 @@ export function ReviewPage({ study }: { study: StudyController }) {
             const saved = study.isSentenceBookmarked(sentence)
             return <button className={`sentence-review-bookmark ${saved ? 'active' : ''}`} type="button" onClick={() => study.toggleSentenceBookmark(sentence)}><Bookmark size={15} fill={saved ? 'currentColor' : 'none'} />{saved ? '已收藏例句' : '收藏这条例句'}</button>
           })()}
-          <button className="speak-button" onClick={() => speak()}><Volume2 size={17} />重播读音</button>
           <div className="swipe-actions">
             <button className="known" type="button" onClick={() => commitSwipe('left')}><ArrowLeft size={20} /><span><b>已掌握</b><small>左滑</small></span></button>
             <button className="save" type="button" onClick={() => commitSwipe('right')}><span><b>收藏复习</b><small>右滑</small></span><ArrowRight size={20} /></button>
