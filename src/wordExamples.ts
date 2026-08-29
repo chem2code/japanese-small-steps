@@ -31,14 +31,20 @@ export function exampleForWord(word: Word): WordExample | null {
   if (!lesson) return null
 
   const needles = candidatesForWord(word)
-  const sections = [
-    { section: '基本课文' as const, source: lesson.basic },
-    { section: '应用课文' as const, source: lesson.conversation },
+  const lessonsToSearch = [
+    lesson,
+    ...beginnerLessons.filter((item) => item.id !== lessonId),
   ]
 
-  for (const { section, source } of sections) {
-    const sentence = lines(source).find((line) => needles.some((needle) => line.includes(needle)))
-    if (sentence) return { sentence, lessonId, section }
+  for (const sourceLesson of lessonsToSearch) {
+    const sections = [
+      { section: '基本课文' as const, source: sourceLesson.basic },
+      { section: '应用课文' as const, source: sourceLesson.conversation },
+    ]
+    for (const { section, source } of sections) {
+      const sentence = lines(source).find((line) => needles.some((needle) => line.includes(needle)))
+      if (sentence) return { sentence, lessonId: sourceLesson.id, section }
+    }
   }
   return null
 }

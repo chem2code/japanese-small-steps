@@ -166,10 +166,14 @@ export function ReviewPage({ study }: { study: StudyController }) {
     if (drag.pointerId !== event.pointerId) return
     const currentX = event.clientX - drag.startX
     const projectedX = currentX + (drag.velocity * 0.14)
+    const wasTap = !drag.moved
     drag.pointerId = -1
     setDragging(false)
     if (Math.abs(projectedX) > 92) commitSwipe(projectedX > 0 ? 'right' : 'left')
-    else setDragX(0)
+    else {
+      setDragX(0)
+      if (wasTap && !exiting) setRevealed((current) => !current)
+    }
   }
 
   const cancelPointer = (event: ReactPointerEvent<HTMLElement>) => {
@@ -241,7 +245,6 @@ export function ReviewPage({ study }: { study: StudyController }) {
               onPointerMove={onPointerMove}
               onPointerUp={finishPointer}
               onPointerCancel={cancelPointer}
-              onClick={() => { if (!dragRef.current.moved && !exiting) setRevealed((current) => !current) }}
               role="button"
               tabIndex={0}
               aria-label="点击查看答案，左滑标记已掌握，右滑收藏复习"
