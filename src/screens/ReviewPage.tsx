@@ -63,13 +63,25 @@ export function ReviewPage({ study }: { study: StudyController }) {
     if (exitTimerRef.current) window.clearTimeout(exitTimerRef.current)
   }, [])
 
-  const fallbackSpeak = (targetWord = word) => {
-    if (!targetWord || !('speechSynthesis' in window)) return
+  const speakText = (text: string, rate = 0.86) => {
+    if (!text || !('speechSynthesis' in window)) return
+    stopAudio()
     window.speechSynthesis.cancel()
-    const utterance = new SpeechSynthesisUtterance((targetWord.word || targetWord.kanji || targetWord.kana).replace(/@\d*/g, ''))
+    const spokenText = text.replace(/^[^：:]{1,12}[：:]\s*/, '').replace(/@\d*/g, '').trim()
+    const utterance = new SpeechSynthesisUtterance(spokenText)
+    const voices = window.speechSynthesis.getVoices()
+    const preferredVoice = voices.find((voice) => voice.lang === 'ja-JP' && /Kyoko|Nanami|Otoya|Haruka|Google.*日本語/i.test(voice.name))
+      ?? voices.find((voice) => voice.lang.toLowerCase().startsWith('ja'))
+    if (preferredVoice) utterance.voice = preferredVoice
     utterance.lang = 'ja-JP'
-    utterance.rate = 0.85
+    utterance.rate = rate
+    utterance.pitch = 1
     window.speechSynthesis.speak(utterance)
+  }
+
+  const fallbackSpeak = (targetWord = word) => {
+    if (!targetWord) return
+    speakText(targetWord.word || targetWord.kanji || targetWord.kana, 0.85)
   }
 
   const speak = (targetWord = word, automatic = false) => {
@@ -240,7 +252,7 @@ export function ReviewPage({ study }: { study: StudyController }) {
               <small>{revealed ? '答案' : '点击翻面查看释义'}</small>
               <strong dangerouslySetInnerHTML={{ __html: japaneseMarkup(word.word || word.kanji || word.kana) }} />
               <span>{word.kana.replace(/@\d*/g, '')}</span>
-              {revealed && <div className="swipe-answer"><em>{word.desc}</em><small>{word.pos}</small>{example && <blockquote><span>课文原句</span><p>{example.sentence}</p><cite>第 {example.lessonId} 课 · {example.section}</cite></blockquote>}</div>}
+              {revealed && <div className="swipe-answer"><em>{word.desc}</em><small>{word.pos}</small>{example && <blockquote><div className="swipe-example-head"><span>课文原句</span><button type="button" onPointerDown={(event) => event.stopPropagation()} onClick={(event) => { event.stopPropagation(); speakText(example.sentence, 0.82) }} aria-label={`播放课文原句：${example.sentence}`}><Volume2 size={15} /><b>听整句</b></button></div><p>{example.sentence}</p><cite>第 {example.lessonId} 课 · {example.section}</cite></blockquote>}</div>}
             </article>
           </div>
 
