@@ -4,17 +4,20 @@ import { Link } from 'react-router-dom'
 import { japaneseMarkup, plainJapanese } from '../content'
 import { type ReviewGrade, type StudyController, wordId } from '../study'
 import { exampleForWord } from '../wordExamples'
-import { wordsForLesson } from '../lessonDetails'
+import { grammarExampleForLesson } from '../grammarExamples'
+import { grammarForLesson, wordsForLesson } from '../lessonDetails'
 import { assetUrl } from '../assetUrl'
 import { beginnerLessons } from '../data'
 
 type ScopeMode = 'lesson' | 'unit'
+type ReviewKind = 'words' | 'grammar'
 type SwipeDirection = 'left' | 'right'
 
 const lessonCount = beginnerLessons.length
 const unitCount = Math.ceil(lessonCount / 4)
 
 export function ReviewPage({ study }: { study: StudyController }) {
+  const [reviewKind, setReviewKind] = useState<ReviewKind>('words')
   const [scopeMode, setScopeMode] = useState<ScopeMode>('lesson')
   const [lessonId, setLessonId] = useState(1)
   const [unitId, setUnitId] = useState(1)
@@ -29,14 +32,22 @@ export function ReviewPage({ study }: { study: StudyController }) {
   const exitTimerRef = useRef<number | null>(null)
   const dragRef = useRef({ pointerId: -1, startX: 0, lastX: 0, lastTime: 0, velocity: 0, moved: false })
 
-  const queue = useMemo(() => {
-    if (scopeMode === 'lesson') return wordsForLesson(lessonId)
+  const lessonIds = useMemo(() => {
+    if (scopeMode === 'lesson') return [lessonId]
     const firstLesson = ((unitId - 1) * 4) + 1
-    return Array.from({ length: 4 }, (_, offset) => wordsForLesson(firstLesson + offset)).flat()
+    return Array.from({ length: 4 }, (_, offset) => firstLesson + offset)
   }, [lessonId, scopeMode, unitId])
-  const word = queue[index]
-  const progress = Math.round((sessionDone / Math.max(queue.length, 1)) * 100)
+  const wordQueue = useMemo(() => lessonIds.flatMap((id) => wordsForLesson(id)), [lessonIds])
+  const grammarQueue = useMemo(() => lessonIds.flatMap((id) => {
+    const lesson = beginnerLessons.find((item) => item.id === id)
+    return lesson ? grammarForLesson(id).map((grammar) => ({ grammar, lesson })) : []
+  }), [lessonIds])
+  const queueLength = reviewKind === 'words' ? wordQueue.length : grammarQueue.length
+  const word = reviewKind === 'words' ? wordQueue[index] : undefined
+  const grammarItem = reviewKind === 'grammar' ? grammarQueue[index] : undefined
+  const progress = Math.round((sessionDone / Math.max(queueLength, 1)) * 100)
   const example = word ? exampleForWord(word) : null
+  const grammarExample = grammarItem ? grammarExampleForLesson(grammarItem.grammar, grammarItem.lesson) : null
 
   const stopAudio = () => {
     audioRef.current?.pause()
@@ -56,7 +67,7 @@ export function ReviewPage({ study }: { study: StudyController }) {
 
   useEffect(() => {
     resetSession()
-  }, [scopeMode, lessonId, unitId])
+  }, [reviewKind, scopeMode, lessonId, unitId])
 
   useEffect(() => () => {
     stopAudio()
@@ -105,12 +116,17 @@ export function ReviewPage({ study }: { study: StudyController }) {
   }
 
   const currentWordKey = word ? wordId(word) : ''
+  const currentGrammarKey = grammarItem ? `${grammarItem.grammar.idx}-${grammarItem.lesson.id}` : ''
 
   useEffect(() => {
-    if (!word) return
-    const timer = window.setTimeout(() => speak(word, true), 80)
+    if (!word && !grammarItem) return
+    const timer = window.setTimeout(() => {
+      if (word) speak(word, true)
+      else if (grammarExample) speakText(grammarExample.sentence, 0.82)
+      else if (grammarItem) speakText(grammarItem.grammar.expression, 0.82)
+    }, 80)
     return () => window.clearTimeout(timer)
-  }, [currentWordKey])
+  }, [currentWordKey, currentGrammarKey])
 
   useEffect(() => {
     if (!audioBlocked || !word) return
@@ -120,9 +136,9 @@ export function ReviewPage({ study }: { study: StudyController }) {
   }, [audioBlocked, currentWordKey])
 
   const advance = (grade: ReviewGrade) => {
-    if (!word) return
+    if (!word && !grammarItem) return
     stopAudio()
-    study.gradeWord(word, grade)
+    if (word) study.gradeWord(word, grade)
     setSessionDone((current) => current + 1)
     setIndex((current) => current + 1)
     setRevealed(false)
@@ -131,13 +147,17 @@ export function ReviewPage({ study }: { study: StudyController }) {
   }
 
   const commitSwipe = (direction: SwipeDirection) => {
-    if (!word || exiting) return
+    if ((!word && !grammarItem) || exiting) return
     setDragging(false)
     setExiting(direction)
     setDragX((direction === 'right' ? 1 : -1) * Math.max(window.innerWidth, 720))
     if ('vibrate' in navigator) navigator.vibrate(12)
     exitTimerRef.current = window.setTimeout(() => {
-      if (direction === 'right' && !study.isBookmarked(word)) study.toggleBookmark(word)
+      if (direction === 'right' && word && !study.isBookmarked(word)) study.toggleBookmark(word)
+      if (direction === 'right' && grammarItem && grammarExample) {
+        const sentence = { sentence: grammarExample.sentence, lessonId: grammarItem.lesson.id, section: grammarExample.section, grammarExpression: grammarItem.grammar.expression }
+        if (!study.isSentenceBookmarked(sentence)) study.toggleSentenceBookmark(sentence)
+      }
       advance(direction === 'left' ? 'good' : 'again')
     }, 240)
   }
@@ -185,11 +205,11 @@ export function ReviewPage({ study }: { study: StudyController }) {
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (!word || exiting) return
+      if ((!word && !grammarItem) || exiting) return
       if (event.key === 'ArrowLeft') { event.preventDefault(); commitSwipe('left') }
       if (event.key === 'ArrowRight') { event.preventDefault(); commitSwipe('right') }
       if (event.key === ' ') { event.preventDefault(); setRevealed((current) => !current) }
-      if (event.key.toLowerCase() === 'b') study.toggleBookmark(word)
+      if (event.key.toLowerCase() === 'b' && word) study.toggleBookmark(word)
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
@@ -203,11 +223,15 @@ export function ReviewPage({ study }: { study: StudyController }) {
     <div className="page review-page tinder-review">
       <header className="review-focus-topbar">
         <Link to="/" aria-label="退出卡片复习"><X size={21} /></Link>
-        <div><strong>卡片复习</strong><small>左滑掌握 · 右滑收藏</small></div>
+        <div><strong>卡片复习</strong><small>{reviewKind === 'words' ? '单词' : '语法'} · 左滑掌握 · 右滑收藏</small></div>
         <span className={audioBlocked ? 'waiting' : ''}><Volume2 size={15} />{audioBlocked ? '触碰后自动播放' : '自动读音已开启'}</span>
       </header>
 
       <section className="review-scope" aria-label="选择复习范围">
+        <div className="scope-segments review-kind-segments">
+          <button className={reviewKind === 'words' ? 'active' : ''} type="button" onClick={() => setReviewKind('words')}>单词复习</button>
+          <button className={reviewKind === 'grammar' ? 'active' : ''} type="button" onClick={() => setReviewKind('grammar')}>语法复习</button>
+        </div>
         <div className="scope-segments">
           <button className={scopeMode === 'lesson' ? 'active' : ''} type="button" onClick={() => setScopeMode('lesson')}>按课复习</button>
           <button className={scopeMode === 'unit' ? 'active' : ''} type="button" onClick={() => setScopeMode('unit')}>按单元复习</button>
@@ -224,21 +248,21 @@ export function ReviewPage({ study }: { study: StudyController }) {
             </select>
           )}
         </label>
-        <div><strong>{scopeLabel}</strong><span>共 {queue.length} 个单词</span></div>
+        <div><strong>{scopeLabel}</strong><span>共 {queueLength} 个{reviewKind === 'words' ? '单词' : '语法点'}</span></div>
       </section>
 
-      {!word || sessionDone >= queue.length ? (
+      {(!word && !grammarItem) || sessionDone >= queueLength ? (
         <section className="review-complete swipe-complete">
           <span><CheckCircle2 size={34} /></span><p className="eyebrow">SESSION COMPLETE</p><h2>{scopeLabel} 复习完成</h2><p>这一轮已经刷完。可以再来一轮，或在上方切换其他课文、单元。</p><button className="button primary" onClick={resetSession}><RotateCcw size={16} />再复习一轮</button>
         </section>
       ) : (
         <section className="swipe-review-shell">
           <div className="srs-progress"><i style={{ width: `${progress}%` }} /></div>
-          <div className="srs-meta"><span>{scopeLabel}</span><b>{sessionDone + 1} / {queue.length}</b></div>
+          <div className="srs-meta"><span>{scopeLabel} · {reviewKind === 'words' ? '单词' : '语法'}</span><b>{sessionDone + 1} / {queueLength}</b></div>
           <div className="swipe-deck">
             <div className="swipe-card-shadow second" /><div className="swipe-card-shadow first" />
             <article
-              key={`${wordId(word)}-${index}`}
+              key={`${word ? wordId(word) : currentGrammarKey}-${index}`}
               className={`srs-card swipe-card ${revealed ? 'revealed' : ''} ${dragging ? 'dragging' : ''} ${exiting ? `exiting-${exiting}` : ''}`}
               style={{ transform: `translate3d(${dragX}px,0,0) rotate(${dragX / 24}deg)`, '--swipe-right-strength': dragX > 0 ? Math.min(dragX / 110, 1) : 0, '--swipe-left-strength': dragX < 0 ? Math.min(Math.abs(dragX) / 110, 1) : 0 } as React.CSSProperties}
               onPointerDown={onPointerDown}
@@ -250,18 +274,21 @@ export function ReviewPage({ study }: { study: StudyController }) {
               aria-label="点击查看答案，左滑标记已掌握，右滑收藏复习"
             >
               <div className="swipe-stamp known"><ArrowLeft />已掌握</div><div className="swipe-stamp save">收藏复习<ArrowRight /></div>
-              <button className="card-audio" type="button" onPointerDown={(event) => event.stopPropagation()} onClick={(event) => { event.stopPropagation(); speak() }} aria-label="重播当前单词发音"><Volume2 size={20} /><span>重播发音</span></button>
-              <button className={`card-bookmark ${study.isBookmarked(word) ? 'active' : ''}`} type="button" onPointerDown={(event) => event.stopPropagation()} onClick={(event) => { event.stopPropagation(); study.toggleBookmark(word) }} aria-label={study.isBookmarked(word) ? '取消收藏单词' : '收藏单词'}><Bookmark size={19} fill={study.isBookmarked(word) ? 'currentColor' : 'none'} /></button>
+              <button className="card-audio" type="button" onPointerDown={(event) => event.stopPropagation()} onClick={(event) => { event.stopPropagation(); word ? speak() : speakText(grammarExample?.sentence || grammarItem?.grammar.expression || '', 0.82) }} aria-label={word ? '重播当前单词发音' : '播放语法例句'}><Volume2 size={20} /><span>{word ? '重播发音' : '播放例句'}</span></button>
+              {word && <button className={`card-bookmark ${study.isBookmarked(word) ? 'active' : ''}`} type="button" onPointerDown={(event) => event.stopPropagation()} onClick={(event) => { event.stopPropagation(); study.toggleBookmark(word) }} aria-label={study.isBookmarked(word) ? '取消收藏单词' : '收藏单词'}><Bookmark size={19} fill={study.isBookmarked(word) ? 'currentColor' : 'none'} /></button>}
               <small>{revealed ? '答案' : '点击翻面查看释义'}</small>
-              <strong dangerouslySetInnerHTML={{ __html: japaneseMarkup(word.word || word.kanji || word.kana) }} />
-              <span>{word.kana.replace(/@\d*/g, '')}</span>
-              {revealed && <div className="swipe-answer"><em>{word.desc}</em><small>{word.pos}</small>{example && <blockquote><div className="swipe-example-head"><span>课文原句</span><button type="button" onPointerDown={(event) => event.stopPropagation()} onClick={(event) => { event.stopPropagation(); speakText(example.sentence, 0.82) }} aria-label={`播放课文原句：${example.sentence}`}><Volume2 size={15} /><b>听整句</b></button></div><p>{example.sentence}</p><cite>第 {example.lessonId} 课 · {example.section}</cite></blockquote>}</div>}
+              <strong dangerouslySetInnerHTML={{ __html: japaneseMarkup(word ? (word.word || word.kanji || word.kana) : (grammarItem?.grammar.expression || '')) }} />
+              {word && <span>{word.kana.replace(/@\d*/g, '')}</span>}
+              {revealed && word && <div className="swipe-answer"><em>{word.desc}</em><small>{word.pos}</small>{example && <blockquote><div className="swipe-example-head"><span>课文原句</span><button type="button" onPointerDown={(event) => event.stopPropagation()} onClick={(event) => { event.stopPropagation(); speakText(example.sentence, 0.82) }} aria-label={`播放课文原句：${example.sentence}`}><Volume2 size={15} /><b>听整句</b></button></div><p>{example.sentence}</p><cite>第 {example.lessonId} 课 · {example.section}</cite></blockquote>}</div>}
+              {revealed && grammarItem && <div className="swipe-answer grammar-review-answer"><em>{grammarItem.grammar.shortexplain}</em><small>{plainJapanese(grammarItem.grammar.explanation).slice(0, 140)}</small>{grammarExample && <blockquote><div className="swipe-example-head"><span>本课例句</span><button type="button" onPointerDown={(event) => event.stopPropagation()} onClick={(event) => { event.stopPropagation(); speakText(grammarExample.sentence, 0.82) }} aria-label={`播放语法例句：${grammarExample.sentence}`}><Volume2 size={15} /><b>听整句</b></button></div><p>{grammarExample.sentence}</p><cite>第 {grammarItem.lesson.id} 课 · {grammarExample.section}</cite></blockquote>}</div>}
             </article>
           </div>
 
           <div className="swipe-hint"><span><ArrowLeft size={14} />已掌握</span><span>点击卡片翻面</span><span>收藏复习<ArrowRight size={14} /></span></div>
-          {revealed && example && (() => {
-            const sentence = { sentence: example.sentence, lessonId: example.lessonId, section: example.section }
+          {revealed && (example || (grammarItem && grammarExample)) && (() => {
+            const sentence = example
+              ? { sentence: example.sentence, lessonId: example.lessonId, section: example.section }
+              : { sentence: grammarExample!.sentence, lessonId: grammarItem!.lesson.id, section: grammarExample!.section, grammarExpression: grammarItem!.grammar.expression }
             const saved = study.isSentenceBookmarked(sentence)
             return <button className={`sentence-review-bookmark ${saved ? 'active' : ''}`} type="button" onClick={() => study.toggleSentenceBookmark(sentence)}><Bookmark size={15} fill={saved ? 'currentColor' : 'none'} />{saved ? '已收藏例句' : '收藏这条例句'}</button>
           })()}
