@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import '../src/styles.css'
 import '../src/apple-mobile.css'
+import '../src/workbook.css'
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://hyoga-japanese-learning.chenlianguu.chatgpt.site'),

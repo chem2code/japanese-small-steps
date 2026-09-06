@@ -19,12 +19,14 @@ interface StudyState {
   activityDates: string[]
   bookmarkedWordIds: string[]
   bookmarkedSentences: BookmarkedSentence[]
+  bookmarkedGrammarIds: string[]
 }
 
 export interface BookmarkedSentence {
   id: string
   sentence: string
   lessonId: number
+  level?: 'beginner' | 'intermediate'
   section: '基本课文' | '应用课文'
   grammarExpression?: string
   audioPath?: string
@@ -39,6 +41,7 @@ const initialState: StudyState = {
   activityDates: [],
   bookmarkedWordIds: [],
   bookmarkedSentences: [],
+  bookmarkedGrammarIds: [],
 }
 
 export const wordId = (word: Word) =>
@@ -57,6 +60,7 @@ function readState(): StudyState {
       activityDates: parsed.activityDates || [],
       bookmarkedWordIds: parsed.bookmarkedWordIds || [],
       bookmarkedSentences: parsed.bookmarkedSentences || [],
+      bookmarkedGrammarIds: Array.isArray(parsed.bookmarkedGrammarIds) ? parsed.bookmarkedGrammarIds.filter((id): id is string => typeof id === 'string') : [],
     }
   } catch {
     return initialState
@@ -130,12 +134,18 @@ export function useStudy() {
     })
   }, [])
 
+  const toggleGrammarBookmark = useCallback((id: string) => {
+    setState((current) => ({ ...current, bookmarkedGrammarIds: current.bookmarkedGrammarIds.includes(id)
+      ? current.bookmarkedGrammarIds.filter((value) => value !== id)
+      : [id, ...current.bookmarkedGrammarIds] }))
+  }, [])
+
   const sentenceId = useCallback((item: SentenceBookmarkInput) =>
-    `${item.lessonId}:${item.section}:${item.sentence}`, [])
+    `${item.level === 'intermediate' ? 'intermediate:' : ''}${item.lessonId}:${item.section}:${item.sentence}`, [])
 
   const toggleSentenceBookmark = useCallback((item: SentenceBookmarkInput) => {
     setState((current) => {
-      const id = `${item.lessonId}:${item.section}:${item.sentence}`
+      const id = `${item.level === 'intermediate' ? 'intermediate:' : ''}${item.lessonId}:${item.section}:${item.sentence}`
       const exists = current.bookmarkedSentences.some((sentence) => sentence.id === id)
       const bookmarkedSentences = exists
         ? current.bookmarkedSentences.filter((sentence) => sentence.id !== id)
@@ -188,6 +198,7 @@ export function useStudy() {
     toggleLesson,
     gradeWord,
     toggleBookmark,
+    toggleGrammarBookmark,
     toggleSentenceBookmark,
     bookmarkedWords,
     isBookmarked: (word: Word) => state.bookmarkedWordIds.includes(wordId(word)),

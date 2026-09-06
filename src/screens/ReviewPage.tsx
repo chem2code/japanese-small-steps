@@ -1,26 +1,28 @@
 import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
 import { ArrowLeft, ArrowRight, Bookmark, CheckCircle2, RotateCcw, Volume2, X } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { japaneseMarkup, plainJapanese } from '../content'
 import { type ReviewGrade, type StudyController, wordId } from '../study'
 import { exampleForWord } from '../wordExamples'
 import { grammarExampleForLesson } from '../grammarExamples'
 import { grammarForLesson, wordsForLesson } from '../lessonDetails'
 import { assetUrl } from '../assetUrl'
-import { beginnerLessons } from '../data'
+import { beginnerLessons, intermediateLessons, type Level } from '../data'
+import { GrammarDetail, playGrammarAudio, stopGrammarAudio } from '../components/GrammarDetail'
+import { grammarTitle, grammarNotes } from '../grammarGuide'
 
 type ScopeMode = 'lesson' | 'unit'
 type ReviewKind = 'words' | 'grammar'
 type SwipeDirection = 'left' | 'right'
 
-const lessonCount = beginnerLessons.length
-const unitCount = Math.ceil(lessonCount / 4)
-
 export function ReviewPage({ study }: { study: StudyController }) {
-  const [reviewKind, setReviewKind] = useState<ReviewKind>('words')
+  const [params] = useSearchParams()
+  const [courseLevel, setCourseLevel] = useState<Level>(params.get('level') === 'intermediate' && params.get('kind') === 'grammar' ? 'intermediate' : 'beginner')
+  const initialLesson = Math.floor(Math.max(1, Math.min(courseLevel === 'intermediate' ? 32 : 48, Number(params.get('lesson')) || 1)))
+  const [reviewKind, setReviewKind] = useState<ReviewKind>(params.get('kind') === 'grammar' ? 'grammar' : 'words')
   const [scopeMode, setScopeMode] = useState<ScopeMode>('lesson')
-  const [lessonId, setLessonId] = useState(1)
-  const [unitId, setUnitId] = useState(1)
+  const [lessonId, setLessonId] = useState(initialLesson)
+  const [unitId, setUnitId] = useState(Math.ceil(initialLesson / 4))
   const [index, setIndex] = useState(0)
   const [revealed, setRevealed] = useState(false)
   const [sessionDone, setSessionDone] = useState(0)
@@ -28,9 +30,11 @@ export function ReviewPage({ study }: { study: StudyController }) {
   const [dragging, setDragging] = useState(false)
   const [exiting, setExiting] = useState<SwipeDirection | null>(null)
   const [audioBlocked, setAudioBlocked] = useState(false)
+  const scopeLessons = courseLevel === 'intermediate' ? intermediateLessons : beginnerLessons
+  const unitCount = Math.ceil(scopeLessons.length / 4)
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const exitTimerRef = useRef<number | null>(null)
-  const dragRef = useRef({ pointerId: -1, startX: 0, lastX: 0, lastTime: 0, velocity: 0, moved: false })
+  const dragRef = useRef({ pointerId: -1, startX: 0, startY: 0, lastX: 0, lastTime: 0, velocity: 0, moved: false })
 
   const lessonIds = useMemo(() => {
     if (scopeMode === 'lesson') return [lessonId]
@@ -39,9 +43,9 @@ export function ReviewPage({ study }: { study: StudyController }) {
   }, [lessonId, scopeMode, unitId])
   const wordQueue = useMemo(() => lessonIds.flatMap((id) => wordsForLesson(id)), [lessonIds])
   const grammarQueue = useMemo(() => lessonIds.flatMap((id) => {
-    const lesson = beginnerLessons.find((item) => item.id === id)
-    return lesson ? grammarForLesson(id).map((grammar) => ({ grammar, lesson })) : []
-  }), [lessonIds])
+    const lesson = scopeLessons.find((item) => item.id === id)
+    return lesson ? grammarForLesson(id, courseLevel).map((grammar) => ({ grammar, lesson })) : []
+  }), [lessonIds, courseLevel])
   const queueLength = reviewKind === 'words' ? wordQueue.length : grammarQueue.length
   const word = reviewKind === 'words' ? wordQueue[index] : undefined
   const grammarItem = reviewKind === 'grammar' ? grammarQueue[index] : undefined
@@ -51,7 +55,7 @@ export function ReviewPage({ study }: { study: StudyController }) {
 
   const stopAudio = () => {
     audioRef.current?.pause()
-    window.speechSynthesis?.cancel()
+    stopGrammarAudio()
   }
 
   const resetSession = () => {
@@ -67,7 +71,7 @@ export function ReviewPage({ study }: { study: StudyController }) {
 
   useEffect(() => {
     resetSession()
-  }, [reviewKind, scopeMode, lessonId, unitId])
+  }, [reviewKind, scopeMode, lessonId, unitId, courseLevel])
 
   useEffect(() => () => {
     stopAudio()
@@ -78,7 +82,7 @@ export function ReviewPage({ study }: { study: StudyController }) {
     if (!text || !('speechSynthesis' in window)) return
     stopAudio()
     window.speechSynthesis.cancel()
-    const spokenText = text.replace(/^[^：:]{1,12}[：:]\s*/, '').replace(/@\d*/g, '').trim()
+    const spokenText = plainJapanese(text).replace(/^[^：:]{1,12}[：:]\s*/, '').trim()
     const utterance = new SpeechSynthesisUtterance(spokenText)
     const voices = window.speechSynthesis.getVoices()
     const preferredVoice = voices.find((voice) => voice.lang === 'ja-JP' && /Kyoko|Nanami|Otoya|Haruka|Google.*日本語/i.test(voice.name))
@@ -118,22 +122,31 @@ export function ReviewPage({ study }: { study: StudyController }) {
   const currentWordKey = word ? wordId(word) : ''
   const currentGrammarKey = grammarItem ? `${grammarItem.grammar.idx}-${grammarItem.lesson.id}` : ''
 
+  const speakGrammar = (automatic = false) => {
+    if (!grammarItem) return
+    stopAudio()
+    const note = grammarNotes[grammarItem.grammar.idx]
+    const text = grammarExample?.sentence || note?.example
+    if (!text) return
+    const path = grammarExample?.audioPath
+    void playGrammarAudio(text, path, automatic).then(() => setAudioBlocked(false)).catch(() => setAudioBlocked(true))
+  }
+
   useEffect(() => {
     if (!word && !grammarItem) return
     const timer = window.setTimeout(() => {
       if (word) speak(word, true)
-      else if (grammarExample) speakText(grammarExample.sentence, 0.82)
-      else if (grammarItem) speakText(grammarItem.grammar.expression, 0.82)
+      else speakGrammar(true)
     }, 80)
-    return () => window.clearTimeout(timer)
+    return () => { window.clearTimeout(timer); stopAudio() }
   }, [currentWordKey, currentGrammarKey])
 
   useEffect(() => {
-    if (!audioBlocked || !word) return
-    const unlockAudio = () => speak(word, true)
+    if (!audioBlocked || (!word && !grammarItem)) return
+    const unlockAudio = () => word ? speak(word, true) : speakGrammar(true)
     window.addEventListener('pointerdown', unlockAudio, { once: true, capture: true })
     return () => window.removeEventListener('pointerdown', unlockAudio, { capture: true })
-  }, [audioBlocked, currentWordKey])
+  }, [audioBlocked, currentWordKey, currentGrammarKey])
 
   const advance = (grade: ReviewGrade) => {
     if (!word && !grammarItem) return
@@ -154,8 +167,9 @@ export function ReviewPage({ study }: { study: StudyController }) {
     if ('vibrate' in navigator) navigator.vibrate(12)
     exitTimerRef.current = window.setTimeout(() => {
       if (direction === 'right' && word && !study.isBookmarked(word)) study.toggleBookmark(word)
+      if (direction === 'right' && grammarItem && !study.bookmarkedGrammarIds.includes(grammarItem.grammar.idx)) study.toggleGrammarBookmark(grammarItem.grammar.idx)
       if (direction === 'right' && grammarItem && grammarExample) {
-        const sentence = { sentence: grammarExample.sentence, lessonId: grammarItem.lesson.id, section: grammarExample.section, grammarExpression: grammarItem.grammar.expression }
+        const sentence = { ...grammarExample, lessonId: grammarItem.lesson.id, level: grammarItem.lesson.level, grammarExpression: grammarItem.grammar.expression }
         if (!study.isSentenceBookmarked(sentence)) study.toggleSentenceBookmark(sentence)
       }
       advance(direction === 'left' ? 'good' : 'again')
@@ -163,9 +177,10 @@ export function ReviewPage({ study }: { study: StudyController }) {
   }
 
   const onPointerDown = (event: ReactPointerEvent<HTMLElement>) => {
-    if (exiting) return
+    if (exiting || !event.isPrimary || event.button !== 0 || dragRef.current.pointerId !== -1) return
+    if ((event.target as HTMLElement).closest('button,a,input,select')) return
     event.currentTarget.setPointerCapture(event.pointerId)
-    dragRef.current = { pointerId: event.pointerId, startX: event.clientX, lastX: event.clientX, lastTime: event.timeStamp, velocity: 0, moved: false }
+    dragRef.current = { pointerId: event.pointerId, startX: event.clientX, startY: event.clientY, lastX: event.clientX, lastTime: event.timeStamp, velocity: 0, moved: false }
     setDragging(true)
   }
 
@@ -177,7 +192,7 @@ export function ReviewPage({ study }: { study: StudyController }) {
     drag.velocity = ((event.clientX - drag.lastX) / elapsed) * 1000
     drag.lastX = event.clientX
     drag.lastTime = event.timeStamp
-    if (Math.abs(nextX) > 9) drag.moved = true
+    if (Math.abs(nextX) > 9 || Math.abs(event.clientY - drag.startY) > 9) drag.moved = true
     setDragX(nextX)
   }
 
@@ -186,7 +201,7 @@ export function ReviewPage({ study }: { study: StudyController }) {
     if (drag.pointerId !== event.pointerId) return
     const currentX = event.clientX - drag.startX
     const projectedX = currentX + (drag.velocity * 0.14)
-    const wasTap = !drag.moved
+    const wasTap = !drag.moved && Math.abs(currentX) < 9 && Math.abs(event.clientY - drag.startY) < 9
     drag.pointerId = -1
     setDragging(false)
     if (Math.abs(projectedX) > 92) commitSwipe(projectedX > 0 ? 'right' : 'left')
@@ -205,19 +220,21 @@ export function ReviewPage({ study }: { study: StudyController }) {
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
+      if ((event.target as HTMLElement).closest('button,a,input,select,textarea,[contenteditable="true"]')) return
       if ((!word && !grammarItem) || exiting) return
       if (event.key === 'ArrowLeft') { event.preventDefault(); commitSwipe('left') }
       if (event.key === 'ArrowRight') { event.preventDefault(); commitSwipe('right') }
       if (event.key === ' ') { event.preventDefault(); setRevealed((current) => !current) }
       if (event.key.toLowerCase() === 'b' && word) study.toggleBookmark(word)
+      if (event.key.toLowerCase() === 'b' && grammarItem) study.toggleGrammarBookmark(grammarItem.grammar.idx)
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
   })
 
-  const scopeLabel = scopeMode === 'lesson'
+  const scopeLabel = `${courseLevel === 'intermediate' ? '中级' : '初级'} · ` + (scopeMode === 'lesson'
     ? `第 ${lessonId} 课`
-    : `第 ${unitId} 单元 · ${((unitId - 1) * 4) + 1}–${unitId * 4} 课`
+    : `第 ${unitId} 单元 · ${((unitId - 1) * 4) + 1}–${unitId * 4} 课`)
 
   return (
     <div className="page review-page tinder-review">
@@ -229,9 +246,10 @@ export function ReviewPage({ study }: { study: StudyController }) {
 
       <section className="review-scope" aria-label="选择复习范围">
         <div className="scope-segments review-kind-segments">
-          <button className={reviewKind === 'words' ? 'active' : ''} type="button" onClick={() => setReviewKind('words')}>单词复习</button>
+          <button className={reviewKind === 'words' ? 'active' : ''} type="button" onClick={() => { setReviewKind('words'); setCourseLevel('beginner') }}>单词复习</button>
           <button className={reviewKind === 'grammar' ? 'active' : ''} type="button" onClick={() => setReviewKind('grammar')}>语法复习</button>
         </div>
+        {reviewKind === 'grammar' && <label className="review-level-select"><span>教材</span><select value={courseLevel} onChange={(event) => { setCourseLevel(event.target.value as Level); setLessonId(1); setUnitId(1) }}><option value="beginner">新标日初级 · 48 课</option><option value="intermediate">新标日中级 · 32 课</option></select></label>}
         <div className="scope-segments">
           <button className={scopeMode === 'lesson' ? 'active' : ''} type="button" onClick={() => setScopeMode('lesson')}>按课复习</button>
           <button className={scopeMode === 'unit' ? 'active' : ''} type="button" onClick={() => setScopeMode('unit')}>按单元复习</button>
@@ -240,7 +258,7 @@ export function ReviewPage({ study }: { study: StudyController }) {
           <span>{scopeMode === 'lesson' ? '选择课文' : '选择单元'}</span>
           {scopeMode === 'lesson' ? (
             <select value={lessonId} onChange={(event) => setLessonId(Number(event.target.value))}>
-              {beginnerLessons.map((lesson) => <option key={lesson.id} value={lesson.id}>第 {lesson.id} 课 · {plainJapanese(lesson.title)}</option>)}
+              {scopeLessons.map((lesson) => <option key={lesson.id} value={lesson.id}>第 {lesson.id} 课 · {plainJapanese(lesson.title)}</option>)}
             </select>
           ) : (
             <select value={unitId} onChange={(event) => setUnitId(Number(event.target.value))}>
@@ -274,21 +292,19 @@ export function ReviewPage({ study }: { study: StudyController }) {
               aria-label="点击查看答案，左滑标记已掌握，右滑收藏复习"
             >
               <div className="swipe-stamp known"><ArrowLeft />已掌握</div><div className="swipe-stamp save">收藏复习<ArrowRight /></div>
-              <button className="card-audio" type="button" onPointerDown={(event) => event.stopPropagation()} onClick={(event) => { event.stopPropagation(); word ? speak() : speakText(grammarExample?.sentence || grammarItem?.grammar.expression || '', 0.82) }} aria-label={word ? '重播当前单词发音' : '播放语法例句'}><Volume2 size={20} /><span>{word ? '重播发音' : '播放例句'}</span></button>
+              {(word || grammarExample || (grammarItem && grammarNotes[grammarItem.grammar.idx])) && <button className="card-audio" type="button" onPointerDown={(event) => event.stopPropagation()} onClick={(event) => { event.stopPropagation(); word ? speak() : speakGrammar() }} aria-label={word ? '重播当前单词发音' : '播放语法例句'}><Volume2 size={20} /><span>{word ? '重播发音' : '播放例句'}</span></button>}
               {word && <button className={`card-bookmark ${study.isBookmarked(word) ? 'active' : ''}`} type="button" onPointerDown={(event) => event.stopPropagation()} onClick={(event) => { event.stopPropagation(); study.toggleBookmark(word) }} aria-label={study.isBookmarked(word) ? '取消收藏单词' : '收藏单词'}><Bookmark size={19} fill={study.isBookmarked(word) ? 'currentColor' : 'none'} /></button>}
               <small>{revealed ? '答案' : '点击翻面查看释义'}</small>
-              <strong dangerouslySetInnerHTML={{ __html: japaneseMarkup(word ? (word.word || word.kanji || word.kana) : (grammarItem?.grammar.expression || '')) }} />
+              <strong lang="ja" dangerouslySetInnerHTML={{ __html: japaneseMarkup(word ? (word.word || word.kanji || word.kana) : (grammarItem ? grammarTitle(grammarItem.grammar) : '')) }} />
               {word && <span>{word.kana.replace(/@\d*/g, '')}</span>}
               {revealed && word && <div className="swipe-answer"><em>{word.desc}</em><small>{word.pos}</small>{example && <blockquote><div className="swipe-example-head"><span>课文原句</span><button type="button" onPointerDown={(event) => event.stopPropagation()} onClick={(event) => { event.stopPropagation(); speakText(example.sentence, 0.82) }} aria-label={`播放课文原句：${example.sentence}`}><Volume2 size={15} /><b>听整句</b></button></div><p>{example.sentence}</p><cite>第 {example.lessonId} 课 · {example.section}</cite></blockquote>}</div>}
-              {revealed && grammarItem && <div className="swipe-answer grammar-review-answer"><em>{grammarItem.grammar.shortexplain}</em><small>{plainJapanese(grammarItem.grammar.explanation).slice(0, 140)}</small>{grammarExample && <blockquote><div className="swipe-example-head"><span>本课例句</span><button type="button" onPointerDown={(event) => event.stopPropagation()} onClick={(event) => { event.stopPropagation(); speakText(grammarExample.sentence, 0.82) }} aria-label={`播放语法例句：${grammarExample.sentence}`}><Volume2 size={15} /><b>听整句</b></button></div><p>{grammarExample.sentence}</p><cite>第 {grammarItem.lesson.id} 课 · {grammarExample.section}</cite></blockquote>}</div>}
+              {revealed && grammarItem && <div className="swipe-answer grammar-review-answer" onPointerDown={(event) => event.stopPropagation()}><GrammarDetail compact grammar={grammarItem.grammar} lesson={grammarItem.lesson} study={study} /></div>}
             </article>
           </div>
 
-          <div className="swipe-hint"><span><ArrowLeft size={14} />已掌握</span><span>点击卡片翻面</span><span>收藏复习<ArrowRight size={14} /></span></div>
-          {revealed && (example || (grammarItem && grammarExample)) && (() => {
-            const sentence = example
-              ? { sentence: example.sentence, lessonId: example.lessonId, section: example.section }
-              : { sentence: grammarExample!.sentence, lessonId: grammarItem!.lesson.id, section: grammarExample!.section, grammarExpression: grammarItem!.grammar.expression }
+          <div className="swipe-hint"><span><ArrowLeft size={14} />已掌握</span><button className="quiet-button" type="button" onClick={() => setRevealed(!revealed)}>{revealed ? '收起讲解' : '查看答案与例句'}</button><span>收藏复习<ArrowRight size={14} /></span></div>
+          {revealed && example && (() => {
+            const sentence = { sentence: example.sentence, lessonId: example.lessonId, section: example.section }
             const saved = study.isSentenceBookmarked(sentence)
             return <button className={`sentence-review-bookmark ${saved ? 'active' : ''}`} type="button" onClick={() => study.toggleSentenceBookmark(sentence)}><Bookmark size={15} fill={saved ? 'currentColor' : 'none'} />{saved ? '已收藏例句' : '收藏这条例句'}</button>
           })()}

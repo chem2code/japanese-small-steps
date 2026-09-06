@@ -6,6 +6,7 @@ import {
   ChevronRight,
   Clapperboard,
   Home,
+  Languages,
 } from 'lucide-react'
 import { useStudy } from './study'
 import { HomePage } from './screens/HomePage'
@@ -14,12 +15,14 @@ import { LessonPage } from './screens/LessonPage'
 import { ReviewPage } from './screens/ReviewPage'
 import { BookmarksPage } from './screens/BookmarksPage'
 import { ShortsPage } from './screens/ShortsPage'
+import { GrammarPage } from './screens/GrammarPage'
 
 const nav = [
   { to: '/', label: '学习首页', icon: Home, end: true },
   { to: '/courses', label: '课程资料库', icon: BookOpen },
+  { to: '/grammar', label: '语法手册', icon: Languages },
   { to: '/shorts', label: '刷课文', icon: Clapperboard },
-  { to: '/review', label: '智能复习', icon: Brain },
+  { to: '/review', label: '卡片复习', icon: Brain },
   { to: '/bookmarks', label: '我的收藏', icon: Bookmark },
 ]
 
@@ -65,6 +68,7 @@ export default function App() {
             <Route path="/plan" element={<Navigate to="/" replace />} />
             <Route path="/practice" element={<Navigate to="/" replace />} />
             <Route path="/review" element={<ReviewPage study={study} />} />
+            <Route path="/grammar" element={<GrammarPage study={study} />} />
             <Route path="/bookmarks" element={<BookmarksPage study={study} />} />
             <Route path="/shorts" element={<ShortsPage />} />
             <Route path="/courses" element={<CoursesPage />} />
@@ -74,7 +78,7 @@ export default function App() {
           </Routes>
         </main>
         <nav className="mobile-tabbar" aria-label="主要导航">
-          {nav.map(({ to, label, icon: Icon, end }) => (
+          {nav.filter((item) => item.to !== '/shorts').map(({ to, label, icon: Icon, end }) => (
             <NavLink
               key={to}
               to={to}
@@ -84,7 +88,7 @@ export default function App() {
               }
             >
               <Icon size={22} strokeWidth={2.1} />
-              <span>{label === '学习首页' ? '首页' : label === '课程资料库' ? '课程' : label === '刷课文' ? '刷课文' : label === '我的收藏' ? '收藏' : '复习'}</span>
+              <span>{label === '学习首页' ? '首页' : label === '课程资料库' ? '课程' : label === '语法手册' ? '语法' : label === '我的收藏' ? '收藏' : '复习'}</span>
             </NavLink>
           ))}
         </nav>

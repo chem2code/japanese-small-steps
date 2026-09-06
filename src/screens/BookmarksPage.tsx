@@ -2,23 +2,22 @@ import { useState } from 'react'
 import { BookOpen, Bookmark, MessageSquareQuote, Volume2 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { japaneseMarkup } from '../content'
-import { assetUrl } from '../assetUrl'
+import { playGrammarAudio, stopGrammarAudio } from '../components/GrammarDetail'
+import { useEffect } from 'react'
 import { exampleForWord } from '../wordExamples'
 import type { SentenceBookmarkInput, StudyController } from '../study'
 
 export function BookmarksPage({ study }: { study: StudyController }) {
   const [tab, setTab] = useState<'words' | 'sentences'>('words')
+  const [audioError, setAudioError] = useState(false)
+  useEffect(() => () => stopGrammarAudio(), [])
   const speak = (text: string) => {
-    if (!('speechSynthesis' in window)) return
-    window.speechSynthesis.cancel()
-    const utterance = new SpeechSynthesisUtterance(text.replace(/@\d*/g, ''))
-    utterance.lang = 'ja-JP'; utterance.rate = 0.85
-    window.speechSynthesis.speak(utterance)
+    setAudioError(false)
+    void playGrammarAudio(text).catch(() => setAudioError(true))
   }
   const playSentence = (sentence: SentenceBookmarkInput) => {
-    if (!sentence.audioPath) { speak(sentence.sentence); return }
-    const audio = new Audio(assetUrl(sentence.audioPath))
-    void audio.play().catch(() => speak(sentence.sentence))
+    setAudioError(false)
+    void playGrammarAudio(sentence.sentence, sentence.audioPath).catch(() => setAudioError(true))
   }
 
   const empty = tab === 'words' ? study.bookmarkedWords.length === 0 : study.bookmarkedSentences.length === 0
@@ -26,8 +25,10 @@ export function BookmarksPage({ study }: { study: StudyController }) {
     <div className="page bookmarks-page">
       <header className="product-page-head compact">
         <div><span className="eyebrow">MY COLLECTIONS</span><h1>我的收藏</h1><p>把重点单词和有用的课文例句放在一起，随时回到原课复习。</p></div>
-        <div className="review-count"><Bookmark size={22} /><strong>{study.bookmarkedWords.length + study.bookmarkedSentences.length}</strong><span>项收藏</span></div>
+        <div className="review-count"><Bookmark size={22} /><strong>{study.bookmarkedWords.length + study.bookmarkedSentences.length + study.bookmarkedGrammarIds.length}</strong><span>项收藏</span></div>
       </header>
+      <Link className="grammar-collection-link quiet-button" to="/grammar?saved=1"><Bookmark size={17} />语法收藏 · {study.bookmarkedGrammarIds.length} 条 <span>查看 →</span></Link>
+      {audioError && <p role="status">暂时无法播放，请再试一次。</p>}
       <div className="collection-tabs" role="tablist" aria-label="收藏类型">
         <button className={tab === 'words' ? 'active' : ''} onClick={() => setTab('words')}><Bookmark size={16} />重点单词 <span>{study.bookmarkedWords.length}</span></button>
         <button className={tab === 'sentences' ? 'active' : ''} onClick={() => setTab('sentences')}><MessageSquareQuote size={16} />收藏例句 <span>{study.bookmarkedSentences.length}</span></button>
@@ -55,7 +56,7 @@ export function BookmarksPage({ study }: { study: StudyController }) {
         </section>
       ) : (
         <section className="bookmarked-grid sentence-grid">
-          {study.bookmarkedSentences.map((sentence) => <article className="bookmarked-card sentence-card" key={sentence.id}><div className="sentence-card-head"><span>{sentence.grammarExpression ? '语法例句' : '课文原句'}</span><button type="button" onClick={() => study.toggleSentenceBookmark(sentence)} aria-label="取消收藏例句"><Bookmark size={18} fill="currentColor" /></button></div>{sentence.grammarExpression && <strong className="sentence-grammar">{sentence.grammarExpression}</strong>}<p className="saved-sentence">{sentence.sentence}</p><cite>第 {sentence.lessonId} 课 · {sentence.section}</cite><div className="bookmarked-actions"><button type="button" onClick={() => playSentence(sentence)}><Volume2 size={15} />听例句</button><Link to={`/lesson/beginner/${sentence.lessonId}#${sentence.grammarExpression ? 'grammar' : 'text'}`}><BookOpen size={15} />回到原课</Link></div></article>)}
+          {study.bookmarkedSentences.map((sentence) => <article className="bookmarked-card sentence-card" key={sentence.id}><div className="sentence-card-head"><span>{sentence.grammarExpression ? '语法例句' : '课文原句'}</span><button type="button" onClick={() => study.toggleSentenceBookmark(sentence)} aria-label="取消收藏例句"><Bookmark size={18} fill="currentColor" /></button></div>{sentence.grammarExpression && <strong className="sentence-grammar">{sentence.grammarExpression}</strong>}<p className="saved-sentence">{sentence.sentence}</p><cite>{sentence.level === 'intermediate' ? '中级' : '初级'}第 {sentence.lessonId} 课 · {sentence.section}</cite><div className="bookmarked-actions"><button type="button" onClick={() => playSentence(sentence)}><Volume2 size={15} />听例句</button><Link to={`/lesson/${sentence.level || 'beginner'}/${sentence.lessonId}#${sentence.grammarExpression ? 'grammar' : 'text'}`}><BookOpen size={15} />回到原课</Link></div></article>)}
         </section>
       )}
     </div>

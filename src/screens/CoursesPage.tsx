@@ -1,6 +1,6 @@
 import { ChevronDown, Clock3 } from 'lucide-react'
-import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { Link, useLocation } from 'react-router-dom'
 import { beginnerLessons, intermediateLessons, type Lesson, type Level } from '../data'
 import { plainJapanese } from '../content'
 import { UnitAudioPlayer } from '../components/UnitAudioPlayer'
@@ -41,10 +41,12 @@ function LevelSection({ level, lessons }: { level: Level; lessons: Lesson[] }) {
 }
 
 export function CoursesPage() {
+  const { hash } = useLocation()
+  useEffect(() => { if (hash) document.getElementById(hash.slice(1))?.scrollIntoView() }, [hash])
   return (
     <div className="page courses-page">
-      <header className="course-hero"><span className="eyebrow">NEW STANDARD JAPANESE · 80 LESSONS</span><h1>新标准日本语在线教材</h1><p>按单元查阅初级 48 课与中级 32 课，每课包含课文、发音、语法、生词和配套视频。完成全部内容可系统衔接 JLPT N2。</p><div className="course-facts"><span><Clock3 size={15} /><b>初级</b> 48 课</span><span><b>中级</b> 32 课</span><span><b>用法</b> 随时查阅，自由选课</span></div></header>
-      <nav className="level-tabs"><a href="#beginner">初级课程 <small>48 课</small></a><a href="#intermediate">中级课程 <small>32 课</small></a></nav>
+      <header className="course-hero"><span className="eyebrow">TEXTBOOK / 新标准日本语</span><h1>课程目录</h1><p>按单元打开初级 48 课与中级 32 课。初级与中级均可查阅语法、听课文并复习句型，初级另有单词卡片。备考 N2 时，可结合官方样题查漏补缺。</p><div className="course-facts"><span><Clock3 size={15} /><b>初级</b> 48 课</span><span><b>中级</b> 32 课</span><span><b>用法</b> 随时查阅，自由选课</span></div></header>
+      <nav className="level-tabs"><Link to="/courses#beginner">初级课程 <small>48 课</small></Link><Link to="/courses#intermediate">中级课程 <small>32 课</small></Link></nav>
       <LevelSection level="beginner" lessons={beginnerLessons} />
       <LevelSection level="intermediate" lessons={intermediateLessons} />
     </div>

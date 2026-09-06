@@ -33,12 +33,16 @@ const grammar = Papa.parse<Grammar>(grammarSource, {
   transform: (value) => value.trim(),
 }).data
 
+export const allGrammar = grammar
+
 export const wordsForLesson = (id: number) => {
   const key = String(id).padStart(3, '0')
   return words.filter((item) => item.lesson.includes(key))
 }
 
-export const grammarForLesson = (id: number) => {
-  const key = String(id).padStart(3, '0')
-  return grammar.filter((item) => item.lesson.includes(key))
+export const grammarForLesson = (id: number, level: 'beginner' | 'intermediate' = 'beginner') => {
+  const key = level === 'intermediate' ? `m${String(id).padStart(2, '0')}` : String(id).padStart(3, '0')
+  return grammar.filter((item) => item.lesson.split('|').some((part) => level === 'intermediate'
+    ? part.startsWith('m') && Number(part.slice(1)) === id
+    : part === key))
 }

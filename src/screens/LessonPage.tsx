@@ -15,70 +15,10 @@ import { bilibiliPlayerUrl, bilibiliVideoUrl, videosForLesson } from '../lessonV
 import { FlashcardStudy } from '../components/FlashcardStudy'
 import { UnitAudioPlayer } from '../components/UnitAudioPlayer'
 import type { StudyController } from '../study'
-import { grammarExampleForLesson, grammarPracticePattern } from '../grammarExamples'
-import type { Grammar } from '../lessonDetails'
+import { GrammarDetail } from '../components/GrammarDetail'
 
 function ContentBlock({ source }: { source: string }) {
   return <div className="formatted-content" dangerouslySetInnerHTML={{ __html: renderContent(source) }} />
-}
-
-function speakJapanese(text: string) {
-  if (!('speechSynthesis' in window)) return
-  document.querySelectorAll<HTMLMediaElement>('audio, video').forEach((media) => media.pause())
-  window.speechSynthesis.cancel()
-  const utterance = new SpeechSynthesisUtterance(text)
-  const japaneseVoice = window.speechSynthesis.getVoices().find((voice) => voice.lang.toLowerCase().startsWith('ja'))
-  if (japaneseVoice) utterance.voice = japaneseVoice
-  utterance.lang = 'ja-JP'
-  utterance.rate = 0.82
-  utterance.pitch = 1
-  window.speechSynthesis.speak(utterance)
-}
-
-let activeGrammarAudio: HTMLAudioElement | null = null
-
-function playGrammarExample(text: string, src: string) {
-  document.querySelectorAll<HTMLMediaElement>('audio, video').forEach((media) => media.pause())
-  window.speechSynthesis?.cancel()
-  activeGrammarAudio?.pause()
-  activeGrammarAudio = new Audio(src)
-  activeGrammarAudio.preload = 'auto'
-  void activeGrammarAudio.play().catch(() => speakJapanese(text))
-}
-
-function GrammarCard({ grammar, lesson, study }: { grammar: Grammar; lesson: (typeof beginnerLessons)[number]; study: StudyController }) {
-  const example = grammarExampleForLesson(grammar, lesson)
-  const bookmark = example ? {
-    sentence: example.sentence,
-    lessonId: lesson.id,
-    section: example.section,
-    grammarExpression: grammar.expression,
-    audioPath: `/assets/audio/grammar-examples/g${grammar.idx}.mp3`,
-  } : null
-  const saved = bookmark ? study.isSentenceBookmarked(bookmark) : false
-  return (
-    <article className="grammar-card">
-      <strong>{grammar.expression}</strong>
-      <p>{grammar.explanation.replace(/\\n/g, ' ')}</p>
-      {example ? (
-        <blockquote className="grammar-example">
-          <div className="grammar-example-head">
-            <span>课文原句</span>
-            <button type="button" onClick={() => playGrammarExample(example.sentence, assetUrl(`/assets/audio/grammar-examples/g${grammar.idx}.mp3`))} aria-label={`播放例句：${example.sentence}`}>
-              <Volume2 size={14} />自然语音
-            </button>
-            <button className={saved ? 'saved' : ''} type="button" onClick={() => bookmark && study.toggleSentenceBookmark(bookmark)} aria-label={saved ? '取消收藏例句' : '收藏例句'}>
-              <Bookmark size={14} fill={saved ? 'currentColor' : 'none'} />{saved ? '已收藏' : '收藏例句'}
-            </button>
-          </div>
-          <p>{example.sentence}</p>
-          <cite>第 {lesson.id} 课 · {example.section}</cite>
-        </blockquote>
-      ) : (
-        <div className="grammar-pattern"><span>替换练习</span><code>{grammarPracticePattern(grammar)}</code></div>
-      )}
-    </article>
-  )
 }
 
 function LessonAudio({ src, label, helper, audioRef: providedRef, onPlay }: { src: string; label: string; helper: string; audioRef?: RefObject<HTMLAudioElement | null>; onPlay?: () => void }) {
@@ -127,7 +67,7 @@ export function LessonPage({ study }: { study: StudyController }) {
     setShowTranslation(false)
   }, [id])
   const lessonWords = useMemo(() => level === 'beginner' ? wordsForLesson(id) : [], [id, level])
-  const lessonGrammar = useMemo(() => level === 'beginner' ? grammarForLesson(id) : [], [id, level])
+  const lessonGrammar = useMemo(() => grammarForLesson(id, level), [id, level])
   const lessonAudioRef = useRef<HTMLAudioElement>(null)
   const unitAudioRef = useRef<HTMLAudioElement>(null)
   const wordAudioRef = useRef<HTMLAudioElement>(null)
@@ -429,7 +369,8 @@ export function LessonPage({ study }: { study: StudyController }) {
 
           {lessonGrammar.length > 0 && <section id="grammar" className="lesson-section">
             <div className="lesson-section-title"><span>02</span><div><h2>语法要点</h2><p>本课需要掌握的核心表达</p></div></div>
-            <div className="grammar-list">{lessonGrammar.map((item, index) => <GrammarCard grammar={item} lesson={lesson} study={study} key={`${item.expression}-${index}`} />)}</div>
+            <div className="grammar-section-actions"><Link className="quiet-button" to={`/grammar?item=${lessonGrammar[0]?.idx || ''}`}>在语法手册中查阅 →</Link><Link className="button primary" to={`/review?kind=grammar&level=${level}&lesson=${id}`}>复习本课语法</Link></div>
+            <div className="grammar-list">{lessonGrammar.map((item) => <GrammarDetail grammar={item} lesson={lesson} study={study} key={item.idx} />)}</div>
           </section>}
 
           {lessonWords.length > 0 && <section id="words" className="lesson-section">
