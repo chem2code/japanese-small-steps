@@ -16,6 +16,7 @@ import { ReviewPage } from './screens/ReviewPage'
 import { BookmarksPage } from './screens/BookmarksPage'
 import { ShortsPage } from './screens/ShortsPage'
 import { GrammarPage } from './screens/GrammarPage'
+import { GrammarTopicsPage } from './screens/GrammarTopicsPage'
 
 const nav = [
   { to: '/', label: '学习首页', icon: Home, end: true },
@@ -69,6 +70,8 @@ export default function App() {
             <Route path="/practice" element={<Navigate to="/" replace />} />
             <Route path="/review" element={<ReviewPage study={study} />} />
             <Route path="/grammar" element={<GrammarPage study={study} />} />
+            <Route path="/grammar/topics" element={<GrammarTopicsPage />} />
+            <Route path="/grammar/topics/:topicId" element={<GrammarTopicsPage />} />
             <Route path="/bookmarks" element={<BookmarksPage study={study} />} />
             <Route path="/shorts" element={<ShortsPage />} />
             <Route path="/courses" element={<CoursesPage />} />

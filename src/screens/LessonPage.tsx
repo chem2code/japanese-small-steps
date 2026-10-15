@@ -17,6 +17,7 @@ import { UnitAudioPlayer } from '../components/UnitAudioPlayer'
 import type { StudyController } from '../study'
 import { GrammarDetail } from '../components/GrammarDetail'
 import { Lesson7Extension } from '../components/Lesson7Extension'
+import { grammarTopicLessons } from '../grammarTopics'
 
 function ContentBlock({ source }: { source: string }) {
   return <div className="formatted-content" dangerouslySetInnerHTML={{ __html: renderContent(source) }} />
@@ -371,6 +372,7 @@ export function LessonPage({ study }: { study: StudyController }) {
 
           {level === 'beginner' && id === 7 && <Lesson7Extension />}
           {lessonGrammar.length > 0 && <section id="grammar" className="lesson-section">
+            {level === 'beginner' && grammarTopicLessons.filter((topic) => topic.lessons.includes(id)).map((topic) => <Link className="topic-entry" key={topic.id} to={`/grammar/topics/${topic.id}`}><div><h2>关联专题 · {topic.title}</h2><p>{topic.question}</p></div><ArrowRight size={20} /></Link>)}
             <div className="lesson-section-title"><span>02</span><div><h2>语法要点</h2><p>本课需要掌握的核心表达</p></div></div>
             <div className="grammar-section-actions"><Link className="quiet-button" to={`/grammar?item=${lessonGrammar[0]?.idx || ''}`}>在语法手册中查阅 →</Link><Link className="button primary" to={`/review?kind=grammar&level=${level}&lesson=${id}`}>复习本课语法</Link></div>
             <div className="grammar-list">{lessonGrammar.map((item) => <GrammarDetail grammar={item} lesson={lesson} study={study} key={item.idx} />)}</div>
